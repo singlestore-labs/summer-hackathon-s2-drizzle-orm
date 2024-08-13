@@ -26,6 +26,7 @@ import {
 	type Table,
 } from 'drizzle-orm';
 import { MySqlChar, MySqlVarBinary, MySqlVarChar } from 'drizzle-orm/mysql-core';
+import { SingleStoreChar, SingleStoreVarBinary, SingleStoreVarChar} from 'drizzle-orm/singlestore-core';
 import { type PgArray, PgChar, PgUUID, PgVarchar } from 'drizzle-orm/pg-core';
 import { SQLiteText } from 'drizzle-orm/sqlite-core';
 
@@ -176,10 +177,11 @@ export function createInsertSchema<
 	const columns = getTableColumns(table);
 	const columnEntries = Object.entries(columns);
 
+	const columnMappedEntries = columnEntries.map(([name, column]) => {
+		return [name, mapColumnToSchema(column)];
+	});
 	let schemaEntries = Object.fromEntries(
-		columnEntries.map(([name, column]) => {
-			return [name, mapColumnToSchema(column)];
-		}),
+		columnMappedEntries,
 	);
 
 	if (refine) {
@@ -301,6 +303,8 @@ function mapColumnToSchema(column: Column): TSchema {
 	if (!type) {
 		if (column.dataType === 'custom') {
 			type = Type.Any();
+		} else if (column.dataType === 'buffer') {
+			type = Type.Any();
 		} else if (column.dataType === 'json') {
 			type = jsonSchema;
 		} else if (column.dataType === 'array') {
@@ -324,6 +328,9 @@ function mapColumnToSchema(column: Column): TSchema {
 					|| is(column, MySqlVarChar)
 					|| is(column, MySqlVarBinary)
 					|| is(column, MySqlChar)
+					|| is(column, SingleStoreVarChar)
+					|| is(column, SingleStoreVarBinary)
+					|| is(column, SingleStoreChar)
 					|| is(column, SQLiteText))
 				&& typeof column.length === 'number'
 			) {
