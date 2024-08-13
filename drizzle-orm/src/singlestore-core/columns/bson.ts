@@ -7,7 +7,7 @@ import { SingleStoreColumn, SingleStoreColumnBuilder } from './common.ts';
 
 export type SingleStoreBsonBuilderInitial<TName extends string> = SingleStoreBsonBuilder<{
 	name: TName;
-	dataType: 'json'; // The bson is stored as a json string the same way binary is stored as a string (check `./binary.ts`)
+	dataType: 'buffer';
 	columnType: 'SingleStoreBson';
 	data: unknown;
 	driverParam: string;
@@ -15,13 +15,13 @@ export type SingleStoreBsonBuilderInitial<TName extends string> = SingleStoreBso
 	generated: undefined;
 }>;
 
-export class SingleStoreBsonBuilder<T extends ColumnBuilderBaseConfig<'json', 'SingleStoreBson'>>
+export class SingleStoreBsonBuilder<T extends ColumnBuilderBaseConfig<'buffer', 'SingleStoreBson'>>
 	extends SingleStoreColumnBuilder<T>
 {
 	static readonly [entityKind]: string = 'SingleStoreBsonBuilder';
 
 	constructor(name: T['name']) {
-		super(name, 'json', 'SingleStoreBson');
+		super(name, 'buffer', 'SingleStoreBson');
 	}
 
 	/** @internal */
@@ -35,7 +35,7 @@ export class SingleStoreBsonBuilder<T extends ColumnBuilderBaseConfig<'json', 'S
 	}
 }
 
-export class SingleStoreBson<T extends ColumnBaseConfig<'json', 'SingleStoreBson'>> extends SingleStoreColumn<T> {
+export class SingleStoreBson<T extends ColumnBaseConfig<'buffer', 'SingleStoreBson'>> extends SingleStoreColumn<T> {
 	static readonly [entityKind]: string = 'SingleStoreBson';
 
 	getSQLType(): string {
