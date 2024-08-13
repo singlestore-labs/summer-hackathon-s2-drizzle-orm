@@ -36,7 +36,6 @@ import { expect, test } from 'vitest';
 import { createInsertSchema, createSelectSchema, jsonSchema } from '../src/index.ts';
 import { expectSchemaShape } from './utils.ts';
 
-
 const customInt = customType<{ data: number }>({
 	dataType() {
 		return 'int';

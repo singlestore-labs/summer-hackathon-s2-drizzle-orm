@@ -1,3 +1,4 @@
+import { BSON } from 'bson';
 import {
 	bigint,
 	binary,
@@ -15,10 +16,10 @@ import {
 	longtext,
 	mediumint,
 	mediumtext,
-	singlestoreEnum,
-	singlestoreTable,
 	real,
 	serial,
+	singlestoreEnum,
+	singlestoreTable,
 	smallint,
 	text,
 	time,
@@ -33,7 +34,6 @@ import { expect, test } from 'vitest';
 import { z } from 'zod';
 import { createInsertSchema, createSelectSchema, jsonSchema } from '~/index';
 import { expectSchemaShape } from './utils.ts';
-import {BSON} from 'bson';
 
 const customInt = customType<{ data: number }>({
 	dataType() {

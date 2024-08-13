@@ -1,7 +1,7 @@
 import { type Equal, Expect } from 'type-tests/utils';
 import { type InferInsertModel, type InferSelectModel, sql } from '~/index';
-import { singlestoreTable, serial, text, varchar } from '~/singlestore-core';
 import { drizzle } from '~/mysql2';
+import { serial, singlestoreTable, text, varchar } from '~/singlestore-core';
 import { db } from './db';
 
 const users = singlestoreTable(

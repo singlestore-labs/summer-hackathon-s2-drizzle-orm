@@ -26,7 +26,7 @@ import { param, sql } from '~/sql/sql.ts';
 
 import type { Equal } from 'type-tests/utils.ts';
 import { Expect } from 'type-tests/utils.ts';
-import { type SingleStoreSelect, type SingleStoreSelectQueryBuilder, QueryBuilder } from '~/singlestore-core/index.ts';
+import { QueryBuilder, type SingleStoreSelect, type SingleStoreSelectQueryBuilder } from '~/singlestore-core/index.ts';
 import { db } from './db.ts';
 import { cities, classes, newYorkers, users } from './tables.ts';
 

@@ -54,7 +54,7 @@ export const users = singlestoreTable(
 			.lock('default')
 			.algorythm('copy')
 			.using(`btree`),
-		pk: primaryKey({columns: [users.age1, users.class]}),
+		pk: primaryKey({ columns: [users.age1, users.class] }),
 	}),
 );
 

@@ -26,8 +26,8 @@ import {
 	type Table,
 } from 'drizzle-orm';
 import { MySqlChar, MySqlVarBinary, MySqlVarChar } from 'drizzle-orm/mysql-core';
-import { SingleStoreChar, SingleStoreVarBinary, SingleStoreVarChar} from 'drizzle-orm/singlestore-core';
 import { type PgArray, PgChar, PgUUID, PgVarchar } from 'drizzle-orm/pg-core';
+import { SingleStoreChar, SingleStoreVarBinary, SingleStoreVarChar } from 'drizzle-orm/singlestore-core';
 import { SQLiteText } from 'drizzle-orm/sqlite-core';
 
 type TUnionLiterals<T extends string[]> = T extends readonly [
