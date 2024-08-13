@@ -204,7 +204,10 @@ function mapColumnToSchema(column: Column): z.ZodTypeAny {
 			type = z.string().uuid();
 		} else if (column.dataType === 'custom') {
 			type = z.any();
-		} else if (column.dataType === 'json') {
+		} else if (column.dataType === 'buffer') {
+			type = z.any();
+		}
+		else if (column.dataType === 'json') {
 			type = jsonSchema;
 		} else if (column.dataType === 'array') {
 			type = z.array(mapColumnToSchema((column as PgArray<any, any>).baseColumn));
