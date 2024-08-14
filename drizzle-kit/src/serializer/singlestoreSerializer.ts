@@ -12,6 +12,7 @@ import { RowDataPacket } from 'mysql2/promise';
 import { withStyle } from '../cli/validations/outputs';
 import { IntrospectStage, IntrospectStatus } from '../cli/views';
 
+import { BSON } from 'bson';
 import type { DB } from '../utils';
 import { sqlToStr } from '.';
 import {
@@ -130,6 +131,11 @@ export const generateSingleStoreSnapshot = (
 					} else {
 						if (sqlTypeLowered === 'json') {
 							columnToSet.default = `'${JSON.stringify(column.default)}'`;
+						} else if (sqlTypeLowered === 'bson') {
+							if (column.default !== null) {
+								const hexaCode = `0x${Buffer.from(BSON.serialize(column.default)).toString('hex')}`;
+								columnToSet.default = `${hexaCode}`;
+							}
 						} else if (column.default instanceof Date) {
 							if (sqlTypeLowered === 'date') {
 								columnToSet.default = `'${column.default.toISOString().split('T')[0]}'`;

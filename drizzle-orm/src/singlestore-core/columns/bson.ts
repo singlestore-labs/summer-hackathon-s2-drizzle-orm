@@ -2,7 +2,6 @@ import type { ColumnBuilderBaseConfig, ColumnBuilderRuntimeConfig, MakeColumnCon
 import type { ColumnBaseConfig } from '~/column.ts';
 import { entityKind } from '~/entity.ts';
 import type { AnySingleStoreTable } from '~/singlestore-core/table.ts';
-import { sql } from '~/sql/sql.ts';
 import { SingleStoreColumn, SingleStoreColumnBuilder } from './common.ts';
 
 export type SingleStoreBsonBuilderInitial<TName extends string> = SingleStoreBsonBuilder<{
@@ -42,9 +41,9 @@ export class SingleStoreBson<T extends ColumnBaseConfig<'buffer', 'SingleStoreBs
 		return 'bson';
 	}
 
-	override mapToDriverValue(value: T['data']) {
-		const json = JSON.stringify(value);
-		return sql`${json}:>BSON`;
+	override mapToDriverValue(value: T['data']): string {
+		const jsonData = JSON.stringify(value);
+		return `${jsonData}:>BSON`;
 	}
 }
 

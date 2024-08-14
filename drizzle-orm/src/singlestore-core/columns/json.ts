@@ -42,6 +42,7 @@ export class SingleStoreJson<T extends ColumnBaseConfig<'json', 'SingleStoreJson
 	}
 
 	override mapToDriverValue(value: T['data']): string {
+		console.log('value', value);
 		return JSON.stringify(value);
 	}
 }

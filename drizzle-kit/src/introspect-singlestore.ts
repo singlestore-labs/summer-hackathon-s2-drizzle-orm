@@ -12,7 +12,9 @@ const singlestoreImportsList = new Set([
 	'singlestoreEnum',
 	'bigint',
 	'binary',
+	// TODO: add new type Blob
 	'boolean',
+	'bson',
 	'char',
 	'date',
 	'datetime',
@@ -21,8 +23,6 @@ const singlestoreImportsList = new Set([
 	'float',
 	'int',
 	'json',
-	// TODO: add new type BSON
-	// TODO: add new type Blob
 	// TODO: add new type UUID
 	// TODO: add new type GUID
 	// TODO: add new type Vector
@@ -240,18 +240,6 @@ export const schemaToTypeScript = (
 const mapColumnDefault = (defaultValue: any, isExpression?: boolean) => {
 	if (isExpression) {
 		return `sql\`${defaultValue}\``;
-	}
-
-	return defaultValue;
-};
-
-const mapColumnDefaultForJson = (defaultValue: any) => {
-	if (
-		typeof defaultValue === 'string'
-		&& defaultValue.startsWith("('")
-		&& defaultValue.endsWith("')")
-	) {
-		return defaultValue.substring(2, defaultValue.length - 2);
 	}
 
 	return defaultValue;
@@ -490,19 +478,25 @@ const column = (
 		return out;
 	}
 
-	// in mysql json can't have default value. Will leave it in case smth ;)
-	// TODO: check if SingleStore has json can't have default value
 	if (lowered === 'json') {
 		let out = `${casing(name)}: json("${name}")`;
 
 		out += defaultValue
-			? `.default(${mapColumnDefaultForJson(defaultValue)})`
+			? `.default(${mapColumnDefault(defaultValue)})`
 			: '';
 
 		return out;
 	}
 
-	// TODO: add new type BSON
+	if (lowered === 'bson') {
+		let out = `${casing(name)}: bson("${name}")`;
+
+		out += defaultValue
+			? `.default(${mapColumnDefault(defaultValue)})`
+			: '';
+
+		return out;
+	}
 
 	// TODO: add new type Blob
 

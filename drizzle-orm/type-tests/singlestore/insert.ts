@@ -7,7 +7,7 @@ import { sql } from '~/sql/sql.ts';
 import { db } from './db.ts';
 import { users } from './tables.ts';
 
-const mysqlInsertReturning = await db.insert(users).values({
+const singlestoreInsertReturning = await db.insert(users).values({
 	//    ^?
 	homeCity: 1,
 	class: 'A',
@@ -15,7 +15,7 @@ const mysqlInsertReturning = await db.insert(users).values({
 	enumCol: 'a',
 }).$returningId();
 
-Expect<Equal<{ id: number; serialNullable: number; serialNotNull: number }[], typeof mysqlInsertReturning>>;
+Expect<Equal<{ id: number; serialNullable: number; serialNotNull: number }[], typeof singlestoreInsertReturning>>;
 
 const insert = await db.insert(users).values({
 	homeCity: 1,
