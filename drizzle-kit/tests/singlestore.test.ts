@@ -1,5 +1,7 @@
+import { BSON } from 'bson';
 import { sql } from 'drizzle-orm';
 import {
+	bson,
 	index,
 	json,
 	primaryKey,
@@ -495,6 +497,49 @@ test('add table #14', async () => {
 });
 
 // TODO: add bson type tests
+test('add table with bson field', async () => {
+	const to = {
+		users: singlestoreTable('table', {
+			bson: bson('bson'),
+		}),
+	};
+
+	const { sqlStatements } = await diffTestSchemasSingleStore({}, to, []);
+	expect(sqlStatements.length).toBe(1);
+	expect(sqlStatements[0]).toBe('CREATE TABLE `table` (\n\t`bson` bson\n);\n');
+});
+
+test('add table with bson field with empty default value', async () => {
+	const to = {
+		users: singlestoreTable('table', {
+			bson: bson('bson').default({}),
+		}),
+	};
+
+	const hexaCode = `0x${Buffer.from(BSON.serialize({})).toString('hex')}`;
+
+	const { sqlStatements } = await diffTestSchemasSingleStore({}, to, []);
+	expect(sqlStatements.length).toBe(1);
+	expect(sqlStatements[0]).toBe(
+		`CREATE TABLE \`table\` (\n\t\`bson\` bson DEFAULT ${hexaCode}\n);\n`,
+	);
+});
+
+test('add table with bson field with object default value', async () => {
+	const to = {
+		users: singlestoreTable('table', {
+			bson: bson('bson').default({ key: 'value' }),
+		}),
+	};
+
+	const hexaCode = `0x${Buffer.from(BSON.serialize({ key: 'value' })).toString('hex')}`;
+
+	const { sqlStatements } = await diffTestSchemasSingleStore({}, to, []);
+	expect(sqlStatements.length).toBe(1);
+	expect(sqlStatements[0]).toBe(
+		`CREATE TABLE \`table\` (\n\t\`bson\` bson DEFAULT ${hexaCode}\n);\n`,
+	);
+});
 
 // TODO: add blob type tests
 
