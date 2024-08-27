@@ -68,6 +68,13 @@ import { afterAll, beforeEach, describe, expect, expectTypeOf, test } from 'vite
 import { Expect, toLocalDate } from '~/utils.ts';
 import type { Equal } from '~/utils.ts';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url); 
+const __dirname = path.dirname(__filename);
+const initSqlPath = path.resolve(__dirname, 'test/init.sql');
+
 type TestSingleStoreDB = SingleStoreDatabase<any, any>;
 
 declare module 'vitest' {
@@ -202,24 +209,25 @@ export async function createDockerDB(): Promise<{ connectionString: string; cont
 			PortBindings: {
 				'3306/tcp': [{ HostPort: `${port}` }],
 			},
+			Binds: [`${initSqlPath}:/init.sql`],
 		},
 	});
 
 	await singlestoreContainer.start();
-	await new Promise((resolve) => setTimeout(resolve, 4000));
+	await new Promise((resolve) => setTimeout(resolve, 5000));
 
 	return {
-		connectionString: `mysql://root:singlestore@localhost:${port}/`,
+		connectionString: `mysql://root:singlestore@127.0.0.1:${port}/drizzle`,
 		container: singlestoreContainer,
 	};
 }
 
-// afterAll(async () => {
-// 	await singlestoreContainer?.stop().catch(console.error);
-// });
+afterAll(async () => {
+	await singlestoreContainer?.stop().catch(console.error);
+});
 
 // Tests are slow so we keep track of the test number
-let testRunNumber = 0;
+const testRunNumber = 0;
 
 export function tests(driver?: string) {
 	describe('common', () => {
@@ -233,40 +241,41 @@ export function tests(driver?: string) {
 			await db.execute(sql`drop table if exists users2`);
 			await db.execute(sql`drop table if exists cities`);
 
-			await db.execute(sql`drop schema if exists \`mySchema\``);
-			await db.execute(sql`create schema if not exists \`mySchema\``);
+		await db.execute(sql`drop schema if exists \`mySchema\``);
+		await db.execute(sql`create schema if not exists \`mySchema\``);
 
-			await db.execute(
-				sql`
-					create table userstest (
-						id serial primary key,
-						name text not null,
-						verified boolean not null default false,
-						jsonb json,
-						created_at timestamp not null default now()
-					)
-				`,
-			);
+		await db.execute(
+			sql`
+				create table userstest (
+					id serial primary key,
+					name text not null,
+					verified boolean not null default false,
+					jsonb json,
+					created_at timestamp not null default now()
+				)
+			`,
+		);
 
-			await db.execute(
-				sql`
-					create table users2 (
-						id serial primary key,
-						name text not null,
-						city_id int
-					)
-				`,
-			);
+		await db.execute(
+			sql`
+				create table users2 (
+					id serial primary key,
+					name text not null,
+					city_id int references cities(id)
+				)
+			`,
+		);
 
-			await db.execute(
-				sql`
-					create table cities (
-						id serial primary key,
-						name text not null
-					)
-				`,
-			);
+		await db.execute(
+			sql`
+				create table cities (
+					id serial primary key,
+					name text not null
+				)
+			`,
+		);
 
+		
 			// mySchema
 			await db.execute(
 				sql`
@@ -294,13 +303,11 @@ export function tests(driver?: string) {
 					create table \`mySchema\`.\`users2\` (
 						\`id\` serial primary key,
 						\`name\` text not null,
-						\`city_id\` int
+						\`city_id\` int references \`mySchema\`.\`cities\`(\`id\`)
 					)
 				`,
 			);
-
-			testRunNumber += 1;
-			console.log(`Test number: ${testRunNumber}`);
+			
 		});
 
 		async function setupReturningFunctionsTest(db: SingleStoreDatabase<any, any>) {
