@@ -14,7 +14,7 @@ export default defineConfig({
 			'tests/imports/**/*',
 			'tests/extensions/vectors/**/*',
 			'tests/version.test.ts',
-			'tests/singlestore/**/*.test.ts'
+			'tests/singlestore/**/singlestore-custom.test.ts',
 		],
 		exclude: [
 			...(process.env.SKIP_EXTERNAL_DB_TESTS
@@ -37,7 +37,6 @@ export default defineConfig({
 			// Have a strange "invalid SQL: ERROR: must be owner of schema public" error. Will need to check with xata team
 			'tests/pg/xata-http.test.ts',
 			'tests/pg/neon-http-batch.ts',
-			'tests/singlestore/singlestore-proxy.test.ts'
 		],
 		typecheck: {
 			tsconfig: 'tsconfig.json',
