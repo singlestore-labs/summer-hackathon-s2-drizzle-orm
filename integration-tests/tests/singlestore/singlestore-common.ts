@@ -2899,7 +2899,7 @@ export function tests(driver?: string) {
 					.from(users2Table).where(eq(users2Table.id, 7)),
 			).as('sq1');
 		
-			const sq2 = await db.select().from(sq1).orderBy(asc(sql.identifier('id'))).as('sq2')
+			const sq2 = await db.select().from(sq1).orderBy(asc(sql`id`)).as('sq2')
 			
 			const sq3 = await db.select().from(sq2).limit(1).as('sq3');
 		
@@ -2915,12 +2915,25 @@ export function tests(driver?: string) {
 
 			expect(result).toHaveLength(4);
 
-			expect(result).toEqual([
+			// multiple results possible as a result of the filters >= 5 and ==7 because singlestore doesn't guarantee order
+			const possibleResults = [
+				[
 				{ id: 1, name: 'John' },
 				{ id: 5, name: 'Ben' },
 				{ id: 3, name: 'Tampa' },
 				{ id: 2, name: 'London' },
-			]);
+				],
+				[
+				{ id: 1, name: 'John' },
+				{ id: 8, name: 'Sally' },
+				{ id: 3, name: 'Tampa' },
+				{ id: 2, name: 'London' },
+				],
+			];
+
+			
+			expect(possibleResults).toEqual(expect.arrayContaining([expect.arrayContaining(result)]));
+
 
 			await expect((async () => {
 				union(
