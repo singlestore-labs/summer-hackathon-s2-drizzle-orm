@@ -3384,7 +3384,7 @@ export function tests(driver?: string) {
 			}]);
 		});
 
-		test.only('insert $returningId: serial as id', async (ctx) => {
+		test('insert $returningId: serial as id', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const result = await db.insert(usersTable).values({ id: 1, name: 'John' }).$returningId();
@@ -3396,7 +3396,7 @@ export function tests(driver?: string) {
 			expect(result).toStrictEqual([{ id: 1 }]);
 		});
 
-		test.only('insert $returningId: serial as id, batch insert', async (ctx) => {
+		test('insert $returningId: serial as id, batch insert', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const result = await db.insert(usersTable).values([{ id: 1, name: 'John' }, { id: 2, name: 'John1' }])
