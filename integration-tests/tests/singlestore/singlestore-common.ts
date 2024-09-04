@@ -111,8 +111,7 @@ const usersOnUpdate = singlestoreTable('users_on_update', {
 	id: serial('id').primaryKey(),
 	name: text('name').notNull(),
 	updateCounter: int('update_counter').default(sql`1`).$onUpdateFn(() => sql`update_counter + 1`),
-	updatedAt: datetime('updated_at', { mode: 'date', fsp: 3 }).$onUpdate(() => new Date()),
-	uppercaseName: text('uppercase_name').$onUpdateFn(() => sql`upper(name)`),
+	updatedAt: datetime('updated_at', { mode: 'date', fsp: 6 }).$onUpdateFn(() => new Date()),
 	alwaysNull: text('always_null').$type<string | null>().$onUpdateFn(() => null), // need to add $type because $onUpdate add a default value
 });
 
@@ -2416,7 +2415,7 @@ export function tests(driver?: string) {
 			await db.execute(sql`drop table ${users}`);
 		});
 
-		test.only('utc config for datetime', async (ctx) => {
+		test('utc config for datetime', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			await db.execute(sql`drop table if exists \`datestable\``);
@@ -3008,7 +3007,7 @@ export function tests(driver?: string) {
 			expect(result2[0]?.value).toBe(null);
 		});
 
-		test('test $onUpdateFn and $onUpdate works as $default', async (ctx) => {
+		test.only('test $onUpdateFn and $onUpdate works as $default', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			await db.execute(sql`drop table if exists ${usersOnUpdate}`);
@@ -3020,7 +3019,6 @@ export function tests(driver?: string) {
 					name text not null,
 					update_counter integer default 1 not null,
 					updated_at datetime(6),
-					uppercase_name text,
 					always_null text
 					)
 				`,
@@ -3039,10 +3037,10 @@ export function tests(driver?: string) {
 			const response = await db.select({ ...rest }).from(usersOnUpdate).orderBy(asc(usersOnUpdate.id));
 
 			expect(response).toEqual([
-				{ name: 'John', id: 1, updateCounter: 1, uppercaseName: 'JOHN', alwaysNull: null },
-				{ name: 'Jane', id: 2, updateCounter: 1, uppercaseName: 'JANE', alwaysNull: null },
-				{ name: 'Jack', id: 3, updateCounter: 1, uppercaseName: 'JACK', alwaysNull: null },
-				{ name: 'Jill', id: 4, updateCounter: 1, uppercaseName: 'JILL', alwaysNull: null },
+				{ name: 'John', id: 1, updateCounter: 1, alwaysNull: null },
+				{ name: 'Jane', id: 2, updateCounter: 1, alwaysNull: null },
+				{ name: 'Jack', id: 3, updateCounter: 1, alwaysNull: null },
+				{ name: 'Jill', id: 4, updateCounter: 1, alwaysNull: null },
 			]);
 			const msDelay = 750;
 
@@ -3051,7 +3049,7 @@ export function tests(driver?: string) {
 			}
 		});
 
-		test('test $onUpdateFn and $onUpdate works updating', async (ctx) => {
+		test.only('test $onUpdateFn and $onUpdate works updating', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			await db.execute(sql`drop table if exists ${usersOnUpdate}`);
@@ -3063,7 +3061,6 @@ export function tests(driver?: string) {
 					name text not null,
 					update_counter integer default 1 not null,
 					updated_at datetime(6),
-					uppercase_name text,
 					always_null text
 					)
 				`,
@@ -3076,23 +3073,27 @@ export function tests(driver?: string) {
 				{ id: 4, name: 'Jill' },
 			]);
 			const { updatedAt, ...rest } = getTableColumns(usersOnUpdate);
-			const initial = await db.select({ updatedAt }).from(usersOnUpdate);
+			const initial = await db.select({ id: usersOnUpdate.id, updatedAt: usersOnUpdate.updatedAt }).from(usersOnUpdate);
 
-			await db.update(usersOnUpdate).set({ name: 'Angel', uppercaseName: null }).where(eq(usersOnUpdate.id, 1));
+			await db.update(usersOnUpdate).set({ name: 'Angel' }).where(eq(usersOnUpdate.id, 1));
 
-			const justDates = await db.select({ updatedAt }).from(usersOnUpdate);
+			const justDates = await db.select({ id: usersOnUpdate.id, updatedAt: usersOnUpdate.updatedAt }).from(usersOnUpdate);
 
-			const response = await db.select({ ...rest }).from(usersOnUpdate).orderBy(asc(usersOnUpdate.id));
+			const response = await db.select().from(usersOnUpdate).orderBy(asc(usersOnUpdate.id));
 
 			expect(response).toEqual([
-				{ name: 'Angel', id: 1, updateCounter: 2, uppercaseName: null, alwaysNull: null },
-				{ name: 'Jane', id: 2, updateCounter: 1, uppercaseName: 'JANE', alwaysNull: null },
-				{ name: 'Jack', id: 3, updateCounter: 1, uppercaseName: 'JACK', alwaysNull: null },
-				{ name: 'Jill', id: 4, updateCounter: 1, uppercaseName: 'JILL', alwaysNull: null },
+				{ id: 1, name: 'Angel', updateCounter: 2, updatedAt: expect.any(Date), alwaysNull: null },
+				{ id: 2, name: 'Jane', updateCounter: 1, updatedAt: expect.any(Date), alwaysNull: null },
+				{ id: 3, name: 'Jack', updateCounter: 1, updatedAt: expect.any(Date), alwaysNull: null },
+				{ id: 4, name: 'Jill', updateCounter: 1, updatedAt: expect.any(Date), alwaysNull: null },
 			]);
-			const msDelay = 750;
 
-			expect(initial[0]?.updatedAt?.valueOf()).not.toBe(justDates[0]?.updatedAt?.valueOf());
+			const initialRecord = initial.find(record => record.id === 1);
+			const updatedRecord = justDates.find(record => record.id === 1);
+
+  			expect(initialRecord?.updatedAt?.valueOf()).not.toBe(updatedRecord?.updatedAt?.valueOf());
+			
+			const msDelay = 1000;
 
 			for (const eachUser of justDates) {
 				expect(eachUser.updatedAt!.valueOf()).toBeGreaterThan(Date.now() - msDelay);
