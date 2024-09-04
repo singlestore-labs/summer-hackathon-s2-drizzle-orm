@@ -564,48 +564,6 @@ export abstract class SingleStoreSelectQueryBuilderBase<
 	except = this.createSetOperator('except', false);
 
 	/**
-	 * Adds `except all` set operator to the query.
-	 *
-	 * Calling this method will retrieve all rows from the left query, except for the rows that are present in the result set of the right query.
-	 *
-	 * See docs: {@link https://orm.drizzle.team/docs/set-operations#except-all}
-	 *
-	 * @example
-	 *
-	 * ```ts
-	 * // Select all products that are ordered by regular customers but not by VIP customers
-	 * await db.select({
-	 *   productId: regularCustomerOrders.productId,
-	 *   quantityOrdered: regularCustomerOrders.quantityOrdered,
-	 * })
-	 * .from(regularCustomerOrders)
-	 * .exceptAll(
-	 *   db.select({
-	 *     productId: vipCustomerOrders.productId,
-	 *     quantityOrdered: vipCustomerOrders.quantityOrdered,
-	 *   })
-	 *   .from(vipCustomerOrders)
-	 * );
-	 * // or
-	 * import { exceptAll } from 'drizzle-orm/pg-core'
-	 *
-	 * await exceptAll(
-	 *   db.select({
-	 *     productId: regularCustomerOrders.productId,
-	 *     quantityOrdered: regularCustomerOrders.quantityOrdered
-	 *   })
-	 *   .from(regularCustomerOrders),
-	 *   db.select({
-	 *     productId: vipCustomerOrders.productId,
-	 *     quantityOrdered: vipCustomerOrders.quantityOrdered
-	 *   })
-	 *   .from(vipCustomerOrders)
-	 * );
-	 * ```
-	 */
-	exceptAll = this.createSetOperator('except', true);
-
-	/**
 	 * Adds `minus` set operator to the query.
 	 *
 	 * This is an alias of `except` supported by SingleStore.
@@ -1029,7 +987,6 @@ const getSingleStoreSetOperators = () => ({
 	intersect,
 	intersectAll,
 	except,
-	exceptAll,
 	minus,
 });
 
@@ -1182,48 +1139,6 @@ export const intersectAll = createSetOperator('intersect', true);
  * ```
  */
 export const except = createSetOperator('except', false);
-
-/**
- * Adds `except all` set operator to the query.
- *
- * Calling this method will retrieve all rows from the left query, except for the rows that are present in the result set of the right query.
- *
- * See docs: {@link https://orm.drizzle.team/docs/set-operations#except-all}
- *
- * @example
- *
- * ```ts
- * // Select all products that are ordered by regular customers but not by VIP customers
- * import { exceptAll } from 'drizzle-orm/mysql-core'
- *
- * await exceptAll(
- *   db.select({
- *     productId: regularCustomerOrders.productId,
- *     quantityOrdered: regularCustomerOrders.quantityOrdered
- *   })
- *   .from(regularCustomerOrders),
- *   db.select({
- *     productId: vipCustomerOrders.productId,
- *     quantityOrdered: vipCustomerOrders.quantityOrdered
- *   })
- *   .from(vipCustomerOrders)
- * );
- * // or
- * await db.select({
- *   productId: regularCustomerOrders.productId,
- *   quantityOrdered: regularCustomerOrders.quantityOrdered,
- * })
- * .from(regularCustomerOrders)
- * .exceptAll(
- *   db.select({
- *     productId: vipCustomerOrders.productId,
- *     quantityOrdered: vipCustomerOrders.quantityOrdered,
- *   })
- *   .from(vipCustomerOrders)
- * );
- * ```
- */
-export const exceptAll = createSetOperator('except', true);
 
 /**
  * Adds `minus` set operator to the query.
