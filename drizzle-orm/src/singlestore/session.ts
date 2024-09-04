@@ -39,7 +39,9 @@ export type SingleStoreQueryResult<
 	T = any,
 > = [T extends ResultSetHeader ? T : T[], FieldPacket[]];
 
-export class SingleStoreDriverPreparedQuery<T extends SingleStorePreparedQueryConfig> extends SingleStorePreparedQuery<T> {
+export class SingleStoreDriverPreparedQuery<T extends SingleStorePreparedQueryConfig>
+	extends SingleStorePreparedQuery<T>
+{
 	static readonly [entityKind]: string = 'SingleStoreDriverPreparedQuery';
 
 	private rawQuery: QueryOptions;
@@ -291,7 +293,12 @@ export class SingleStoreDriverSession<
 export class SingleStoreDriverTransaction<
 	TFullSchema extends Record<string, unknown>,
 	TSchema extends TablesRelationalConfig,
-> extends SingleStoreTransaction<SingleStoreDriverQueryResultHKT, SingleStoreDriverPreparedQueryHKT, TFullSchema, TSchema> {
+> extends SingleStoreTransaction<
+	SingleStoreDriverQueryResultHKT,
+	SingleStoreDriverPreparedQueryHKT,
+	TFullSchema,
+	TSchema
+> {
 	static readonly [entityKind]: string = 'SingleStoreDriverTransaction';
 
 	override async transaction<T>(
