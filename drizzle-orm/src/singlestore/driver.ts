@@ -11,7 +11,11 @@ import {
 import { SingleStoreDatabase } from '~/singlestore-core/db.ts';
 import { SingleStoreDialect } from '~/singlestore-core/dialect.ts';
 import type { DrizzleConfig } from '~/utils.ts';
-import type { SingleStoreDriverClient, SingleStoreDriverPreparedQueryHKT, SingleStoreDriverQueryResultHKT } from './session.ts';
+import type {
+	SingleStoreDriverClient,
+	SingleStoreDriverPreparedQueryHKT,
+	SingleStoreDriverQueryResultHKT,
+} from './session.ts';
 import { SingleStoreDriverSession } from './session.ts';
 
 export interface SingleStoreDriverOptions {
