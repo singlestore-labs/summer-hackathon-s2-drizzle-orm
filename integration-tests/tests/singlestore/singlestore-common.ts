@@ -3007,7 +3007,7 @@ export function tests(driver?: string) {
 			expect(result2[0]?.value).toBe(null);
 		});
 
-		test.only('test $onUpdateFn and $onUpdate works as $default', async (ctx) => {
+		test('test $onUpdateFn and $onUpdate works as $default', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			await db.execute(sql`drop table if exists ${usersOnUpdate}`);
@@ -3049,7 +3049,7 @@ export function tests(driver?: string) {
 			}
 		});
 
-		test.only('test $onUpdateFn and $onUpdate works updating', async (ctx) => {
+		test('test $onUpdateFn and $onUpdate works updating', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			await db.execute(sql`drop table if exists ${usersOnUpdate}`);
@@ -3384,7 +3384,7 @@ export function tests(driver?: string) {
 			}]);
 		});
 
-		test('insert $returningId: serial as id', async (ctx) => {
+		test.only('insert $returningId: serial as id', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const result = await db.insert(usersTable).values({ id: 1, name: 'John' }).$returningId();
@@ -3396,7 +3396,7 @@ export function tests(driver?: string) {
 			expect(result).toStrictEqual([{ id: 1 }]);
 		});
 
-		test('insert $returningId: serial as id, batch insert', async (ctx) => {
+		test.only('insert $returningId: serial as id, batch insert', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const result = await db.insert(usersTable).values([{ id: 1, name: 'John' }, { id: 2, name: 'John1' }])
@@ -3406,7 +3406,8 @@ export function tests(driver?: string) {
 				id: number;
 			}[]>();
 
-			expect(result).toStrictEqual([{ id: 1 }, { id: 2 }]);
+			// singlestore auto increments when batch inserting, so the ids increment by one
+			expect(result).toStrictEqual([{ id: 2 }, { id: 3 }]);
 		});
 
 		test('insert $returningId: $default as primary key', async (ctx) => {
