@@ -2,7 +2,6 @@ import { type Equal, Expect } from 'type-tests/utils.ts';
 import { eq } from '~/expressions.ts';
 import {
 	except,
-	exceptAll,
 	intersect,
 	type SingleStoreSetOperator,
 	union,
@@ -61,17 +60,6 @@ const exceptTest = await db
 
 Expect<Equal<{ id: number; homeCity: number }[], typeof exceptTest>>;
 
-const exceptAllTest = await db
-	.select({ id: users.id, homeCity: users.class })
-	.from(users)
-	.except(
-		db
-			.select({ id: users.id, homeCity: sql<'A' | 'C'>`${users.class}` })
-			.from(users),
-	);
-
-Expect<Equal<{ id: number; homeCity: 'A' | 'C' }[], typeof exceptAllTest>>;
-
 const union2Test = await union(db.select().from(cities), db.select().from(cities), db.select().from(cities));
 
 Expect<Equal<{ id: number; name: string; population: number | null }[], typeof union2Test>>;
@@ -118,20 +106,6 @@ const except2Test = await except(
 );
 
 Expect<Equal<{ userId: number }[], typeof except2Test>>;
-
-const exceptAll2Test = await exceptAll(
-	db.select({
-		userId: newYorkers.userId,
-		cityId: newYorkers.cityId,
-	})
-		.from(newYorkers).where(sql``),
-	db.select({
-		userId: newYorkers.userId,
-		cityId: newYorkers.cityId,
-	}).from(newYorkers).leftJoin(users, sql``),
-);
-
-Expect<Equal<{ userId: number; cityId: number | null }[], typeof exceptAll2Test>>;
 
 const unionfull = await union(db.select().from(users), db.select().from(users)).orderBy(sql``).limit(1).offset(2);
 
