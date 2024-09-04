@@ -10,9 +10,7 @@ import {
 } from '~/relations.ts';
 import { SingleStoreDatabase } from '~/singlestore-core/db.ts';
 import { SingleStoreDialect } from '~/singlestore-core/dialect.ts';
-import type { Mode } from '~/singlestore-core/session.ts';
 import type { DrizzleConfig } from '~/utils.ts';
-import { DrizzleError } from '../index.ts';
 import type { SingleStore2Client, SingleStore2PreparedQueryHKT, SingleStore2QueryResultHKT } from './session.ts';
 import { SingleStore2Session } from './session.ts';
 
@@ -32,9 +30,8 @@ export class SingleStore2Driver {
 
 	createSession(
 		schema: RelationalSchemaConfig<TablesRelationalConfig> | undefined,
-		mode: Mode,
 	): SingleStore2Session<Record<string, unknown>, TablesRelationalConfig> {
-		return new SingleStore2Session(this.client, this.dialect, schema, { logger: this.options.logger, mode });
+		return new SingleStore2Session(this.client, this.dialect, schema, { logger: this.options.logger });
 	}
 }
 
@@ -44,13 +41,9 @@ export type SingleStore2Database<
 	TSchema extends Record<string, unknown> = Record<string, never>,
 > = SingleStoreDatabase<SingleStore2QueryResultHKT, SingleStore2PreparedQueryHKT, TSchema>;
 
-export type SingleStore2DrizzleConfig<TSchema extends Record<string, unknown> = Record<string, never>> =
-	& Omit<DrizzleConfig<TSchema>, 'schema'>
-	& ({ schema: TSchema; mode: Mode } | { schema?: undefined; mode?: Mode });
-
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: SingleStore2Client | CallbackConnection | CallbackPool,
-	config: SingleStore2DrizzleConfig<TSchema> = {},
+	config: DrizzleConfig<TSchema> = {},
 ): SingleStore2Database<TSchema> {
 	const dialect = new SingleStoreDialect();
 	let logger;
@@ -65,13 +58,6 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 
 	let schema: RelationalSchemaConfig<TablesRelationalConfig> | undefined;
 	if (config.schema) {
-		if (config.mode === undefined) {
-			throw new DrizzleError({
-				message:
-					'You need to specify "mode": "planetscale" or "default" when providing a schema. Read more: https://orm.drizzle.team/docs/rqb#modes',
-			});
-		}
-
 		const tablesConfig = extractTablesRelationalConfig(
 			config.schema,
 			createTableRelationsHelpers,
@@ -83,11 +69,9 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 		};
 	}
 
-	const mode = config.mode ?? 'default';
-
 	const driver = new SingleStore2Driver(client as SingleStore2Client, dialect, { logger });
-	const session = driver.createSession(schema, mode);
-	return new SingleStoreDatabase(dialect, session, schema, mode) as SingleStore2Database<TSchema>;
+	const session = driver.createSession(schema);
+	return new SingleStoreDatabase(dialect, session, schema) as SingleStore2Database<TSchema>;
 }
 
 interface CallbackClient {
