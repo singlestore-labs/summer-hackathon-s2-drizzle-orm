@@ -68,10 +68,6 @@ import { afterAll, beforeEach, describe, expect, expectTypeOf, test } from 'vite
 import { Expect, toLocalDate } from '~/utils.ts';
 import type { Equal } from '~/utils.ts';
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 type TestSingleStoreDB = SingleStoreDatabase<any, any>;
 
 declare module 'vitest' {
@@ -192,12 +188,6 @@ export async function createDockerDB(): Promise<{ connectionString: string; cont
 	const port = await getPort({ port: 3306 });
 	const image = 'ghcr.io/singlestore-labs/singlestoredb-dev:latest';
 
-	const __filename = fileURLToPath(import.meta.url);
-	const __dirname = path.dirname(__filename);
-	const initSqlPath = path.resolve(__dirname, 'test/init.sql');
-	const initSqlContent = `CREATE DATABASE drizzle;`;
-	fs.writeFileSync(initSqlPath, initSqlContent, { encoding: 'utf8' });
-
 	const pullStream = await docker.pull(image);
 	await new Promise((resolve, reject) =>
 		docker.modem.followProgress(pullStream, (err) => (err ? reject(err) : resolve(err)))
@@ -212,22 +202,21 @@ export async function createDockerDB(): Promise<{ connectionString: string; cont
 			PortBindings: {
 				'3306/tcp': [{ HostPort: `${port}` }],
 			},
-			Binds: [`${initSqlPath}:/init.sql`],
 		},
 	});
 
 	await singlestoreContainer.start();
-	await new Promise((resolve) => setTimeout(resolve, 7000));
+	await new Promise((resolve) => setTimeout(resolve, 4000));
 
 	return {
-		connectionString: `singlestore://root:singlestore@localhost:${port}/drizzle`,
+		connectionString: `mysql://root:singlestore@localhost:${port}/`,
 		container: singlestoreContainer,
 	};
 }
 
-afterAll(async () => {
-	await singlestoreContainer?.stop().catch(console.error);
-});
+// afterAll(async () => {
+// 	await singlestoreContainer?.stop().catch(console.error);
+// });
 
 // Tests are slow so we keep track of the test number
 let testRunNumber = 0;
