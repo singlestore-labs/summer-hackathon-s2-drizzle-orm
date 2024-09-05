@@ -2428,7 +2428,7 @@ export function tests(driver?: string) {
 			);
 			const datesTable = singlestoreTable('datestable', {
 				datetimeUTC: datetime('datetime_utc', { fsp: 6, mode: 'date' }),
-				datetime: datetime('datetime', { fsp: 6 })
+				datetime: datetime('datetime', { fsp: 6 }),
 			});
 
 			const dateObj = new Date('2022-11-11');
@@ -2737,7 +2737,7 @@ export function tests(driver?: string) {
 					.select({ id: users2Table.id, name: users2Table.name })
 					.from(users2Table).where(eq(users2Table.id, 1)),
 			).as('sq');
-			
+
 			const result = await db.select().from(sq).limit(3);
 
 			expect(result).toHaveLength(2);
@@ -2773,19 +2773,18 @@ export function tests(driver?: string) {
 					.from(citiesTable).where(gt(citiesTable.id, 1)),
 				db.select().from(citiesTable).where(eq(citiesTable.id, 2)),
 			).as('sq1');
-			
+
 			const sq2 = await db.select().from(sq1).orderBy(asc(sql`id`)).as('sq2');
 
 			const sq3 = await db.select().from(sq2).limit(1).offset(1).as('sq3');
-			
+
 			const result = await db
 				.select()
 				.from(citiesTable)
 				.except(
 					db
 						.select()
-						.from(sq3)
-						,
+						.from(sq3),
 				);
 
 			expect(result).toHaveLength(2);
@@ -2823,11 +2822,11 @@ export function tests(driver?: string) {
 					.select({ id: users2Table.id, name: users2Table.name })
 					.from(users2Table).where(eq(users2Table.id, 7)),
 			).as('sq1');
-		
-			const sq2 = await db.select().from(sq1).orderBy(asc(sql`id`)).as('sq2')
-			
+
+			const sq2 = await db.select().from(sq1).orderBy(asc(sql`id`)).as('sq2');
+
 			const sq3 = await db.select().from(sq2).limit(1).as('sq3');
-		
+
 			const result = await union(
 				db
 					.select({ id: users2Table.id, name: users2Table.name })
@@ -2836,29 +2835,26 @@ export function tests(driver?: string) {
 				db
 					.select().from(citiesTable).where(gt(citiesTable.id, 1)),
 			);
-		
 
 			expect(result).toHaveLength(4);
 
 			// multiple results possible as a result of the filters >= 5 and ==7 because singlestore doesn't guarantee order
 			const possibleResults = [
 				[
-				{ id: 1, name: 'John' },
-				{ id: 5, name: 'Ben' },
-				{ id: 3, name: 'Tampa' },
-				{ id: 2, name: 'London' },
+					{ id: 1, name: 'John' },
+					{ id: 5, name: 'Ben' },
+					{ id: 3, name: 'Tampa' },
+					{ id: 2, name: 'London' },
 				],
 				[
-				{ id: 1, name: 'John' },
-				{ id: 8, name: 'Sally' },
-				{ id: 3, name: 'Tampa' },
-				{ id: 2, name: 'London' },
+					{ id: 1, name: 'John' },
+					{ id: 8, name: 'Sally' },
+					{ id: 3, name: 'Tampa' },
+					{ id: 2, name: 'London' },
 				],
 			];
 
-			
 			expect(possibleResults).toEqual(expect.arrayContaining([expect.arrayContaining(result)]));
-
 
 			await expect((async () => {
 				union(
@@ -3015,7 +3011,9 @@ export function tests(driver?: string) {
 
 			await db.update(usersOnUpdate).set({ name: 'Angel' }).where(eq(usersOnUpdate.id, 1));
 
-			const justDates = await db.select({ id: usersOnUpdate.id, updatedAt: usersOnUpdate.updatedAt }).from(usersOnUpdate);
+			const justDates = await db.select({ id: usersOnUpdate.id, updatedAt: usersOnUpdate.updatedAt }).from(
+				usersOnUpdate,
+			);
 
 			const response = await db.select().from(usersOnUpdate).orderBy(asc(usersOnUpdate.id));
 
@@ -3026,11 +3024,11 @@ export function tests(driver?: string) {
 				{ id: 4, name: 'Jill', updateCounter: 1, updatedAt: expect.any(Date), alwaysNull: null },
 			]);
 
-			const initialRecord = initial.find(record => record.id === 1);
-			const updatedRecord = justDates.find(record => record.id === 1);
+			const initialRecord = initial.find((record) => record.id === 1);
+			const updatedRecord = justDates.find((record) => record.id === 1);
 
-  			expect(initialRecord?.updatedAt?.valueOf()).not.toBe(updatedRecord?.updatedAt?.valueOf());
-			
+			expect(initialRecord?.updatedAt?.valueOf()).not.toBe(updatedRecord?.updatedAt?.valueOf());
+
 			const msDelay = 1000;
 
 			for (const eachUser of justDates) {
