@@ -273,10 +273,6 @@ export class SingleStore2Session<
 			this.mode,
 		);
 		if (config) {
-			const setTransactionConfigSql = this.getSetTransactionSQL(config);
-			if (setTransactionConfigSql) {
-				await tx.execute(setTransactionConfigSql);
-			}
 			const startTransactionSql = this.getStartTransactionSQL(config);
 			await (startTransactionSql ? tx.execute(startTransactionSql) : tx.execute(sql`begin`));
 		} else {
