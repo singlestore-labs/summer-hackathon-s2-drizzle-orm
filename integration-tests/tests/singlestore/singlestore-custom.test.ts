@@ -1,7 +1,7 @@
 import retry from 'async-retry';
 import type Docker from 'dockerode';
 import { asc, eq, Name, placeholder, sql } from 'drizzle-orm';
-import type { SingleStore2Database } from 'drizzle-orm/singlestore';
+import type { SingleStoreDriverDatabase } from 'drizzle-orm/singlestore';
 import { drizzle } from 'drizzle-orm/singlestore';
 import {
 	alias,
@@ -27,7 +27,7 @@ import { createDockerDB } from './singlestore-common';
 
 const ENABLE_LOGGING = false;
 
-let db: SingleStore2Database;
+let db: SingleStoreDriverDatabase;
 let client: mysql2.Connection;
 let container: Docker.Container | undefined;
 
@@ -54,7 +54,6 @@ beforeAll(async () => {
 			client?.end();
 		},
 	});
-	
 	await client.query(`CREATE DATABASE IF NOT EXISTS drizzle;`);
 	await client.changeUser({ database: 'drizzle' });
 	db = drizzle(client, { logger: ENABLE_LOGGING });

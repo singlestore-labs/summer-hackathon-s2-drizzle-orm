@@ -1,13 +1,13 @@
 import retry from 'async-retry';
 import { drizzle } from 'drizzle-orm/singlestore';
-import type { SingleStore2Database } from 'drizzle-orm/singlestore';
+import type { SingleStoreDriverDatabase } from 'drizzle-orm/singlestore';
 import * as mysql2 from 'mysql2/promise';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { createDockerDB, tests } from './singlestore-common';
 
 const ENABLE_LOGGING = false;
 
-let db: SingleStore2Database;
+let db: SingleStoreDriverDatabase;
 let client: mysql2.Connection;
 
 beforeAll(async () => {
