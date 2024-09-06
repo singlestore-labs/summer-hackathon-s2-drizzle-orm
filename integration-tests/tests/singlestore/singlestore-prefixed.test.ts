@@ -2,7 +2,7 @@ import retry from 'async-retry';
 import type Docker from 'dockerode';
 import type { Equal } from 'drizzle-orm';
 import { asc, eq, getTableName, gt, inArray, Name, sql, TransactionRollbackError } from 'drizzle-orm';
-import type { SingleStore2Database } from 'drizzle-orm/singlestore';
+import type { SingleStoreDriverDatabase } from 'drizzle-orm/singlestore';
 import { drizzle } from 'drizzle-orm/singlestore';
 import {
 	alias,
@@ -31,7 +31,7 @@ import { createDockerDB } from './singlestore-common';
 
 const ENABLE_LOGGING = false;
 
-let db: SingleStore2Database;
+let db: SingleStoreDriverDatabase;
 let client: mysql2.Connection;
 let container: Docker.Container | undefined;
 
