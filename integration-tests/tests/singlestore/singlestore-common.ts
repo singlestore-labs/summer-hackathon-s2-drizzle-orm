@@ -2797,9 +2797,9 @@ export function tests(driver?: string) {
 				return false;
 			};
 		
-			result.forEach(entry => {
+			for (const entry of result) {
 				expect(hasValidEntry(entry)).toBe(true);
-			});
+			}
 
 			await expect((async () => {
 				union(
