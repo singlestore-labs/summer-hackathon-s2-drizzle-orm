@@ -53,6 +53,7 @@ export abstract class SingleStorePreparedQuery<T extends SingleStorePreparedQuer
 	abstract iterator(placeholderValues?: Record<string, unknown>): AsyncGenerator<T['iterator']>;
 }
 
+// In SingleStore, there is no need to explicitly set the isolation level, since READ COMMITTED is the only isolation level supported and is set by default for all transactions
 export interface SingleStoreTransactionConfig {
 	withConsistentSnapshot?: boolean;
 	accessMode?: 'read only' | 'read write';

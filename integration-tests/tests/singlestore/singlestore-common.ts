@@ -2790,13 +2790,13 @@ export function tests(driver?: string) {
 
 			// multiple results possible as a result of the filters >= 5 and ==7 because singlestore doesn't guarantee order
 			// dynamically validate results
-			const hasValidEntry = (entry: { id: number; name: string; }) => {
+			const hasValidEntry = (entry: { id: number; name: string }) => {
 				if (entry.id === 1) return entry.name === 'John';
 				if (entry.id > 1 && entry.id < 5) return entry.name === 'Tampa' || entry.name === 'London';
 				if (entry.id >= 5 && entry.id !== 7) return true; // Accept any entry with id >= 5 and not 7
 				return false;
 			};
-		
+
 			for (const entry of result) {
 				expect(hasValidEntry(entry)).toBe(true);
 			}
