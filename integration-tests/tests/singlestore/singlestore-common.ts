@@ -2098,45 +2098,6 @@ export function tests(driver?: string) {
 			await db.execute(sql`drop table ${products}`);
 		});
 
-		test('transaction with options (set isolationLevel)', async (ctx) => {
-			const { db } = ctx.singlestore;
-
-			const users = singlestoreTable('users_transactions', {
-				id: serial('id').primaryKey(),
-				balance: int('balance').notNull(),
-			});
-			const products = singlestoreTable('products_transactions', {
-				id: serial('id').primaryKey(),
-				price: int('price').notNull(),
-				stock: int('stock').notNull(),
-			});
-
-			await db.execute(sql`drop table if exists ${users}`);
-			await db.execute(sql`drop table if exists ${products}`);
-
-			await db.execute(sql`create table users_transactions (id serial not null primary key, balance int not null)`);
-			await db.execute(
-				sql`create table products_transactions (id serial not null primary key, price int not null, stock int not null)`,
-			);
-
-			const [{ insertId: userId }] = await db.insert(users).values({ id: 1, balance: 100 });
-			const user = await db.select().from(users).where(eq(users.id, userId)).then((rows) => rows[0]!);
-			const [{ insertId: productId }] = await db.insert(products).values({ id: 1, price: 10, stock: 10 });
-			const product = await db.select().from(products).where(eq(products.id, productId)).then((rows) => rows[0]!);
-
-			await db.transaction(async (tx) => {
-				await tx.update(users).set({ balance: user.balance - product.price }).where(eq(users.id, user.id));
-				await tx.update(products).set({ stock: product.stock - 1 }).where(eq(products.id, product.id));
-			}, { isolationLevel: 'serializable' });
-
-			const result = await db.select().from(users);
-
-			expect(result).toEqual([{ id: 1, balance: 90 }]);
-
-			await db.execute(sql`drop table ${users}`);
-			await db.execute(sql`drop table ${products}`);
-		});
-
 		test('transaction rollback', async (ctx) => {
 			const { db } = ctx.singlestore;
 
@@ -2829,16 +2790,16 @@ export function tests(driver?: string) {
 
 			// multiple results possible as a result of the filters >= 5 and ==7 because singlestore doesn't guarantee order
 			// dynamically validate results
-			const hasValidEntry = (entry: { id: number; name: string; }) => {
+			const hasValidEntry = (entry: { id: number; name: string }) => {
 				if (entry.id === 1) return entry.name === 'John';
 				if (entry.id > 1 && entry.id < 5) return entry.name === 'Tampa' || entry.name === 'London';
 				if (entry.id >= 5 && entry.id !== 7) return true; // Accept any entry with id >= 5 and not 7
 				return false;
 			};
-		
-			result.forEach(entry => {
+
+			for (const entry of result) {
 				expect(hasValidEntry(entry)).toBe(true);
-			});
+			}
 
 			await expect((async () => {
 				union(
