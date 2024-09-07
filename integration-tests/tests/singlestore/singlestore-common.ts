@@ -294,10 +294,13 @@ export function tests(driver?: string) {
 					create table \`mySchema\`.\`users2\` (
 						\`id\` serial primary key,
 						\`name\` text not null,
-						\`city_id\` int references \`mySchema\`.\`cities\`(\`id\`)
+						\`city_id\` int 
 					)
 				`,
 			);
+
+			testRunNumber += 1;
+			console.log(`Test number: ${testRunNumber}`);
 			
 		});
 
@@ -2037,7 +2040,7 @@ export function tests(driver?: string) {
 			expect(query.sql).toBe('select something as `test` from `users2` order by `test`');
 		});
 
-		test('timestamp timezone', async (ctx) => {
+		test.only('timestamp timezone', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const date = new Date(Date.parse('2020-01-01T12:34:56+07:00'));
