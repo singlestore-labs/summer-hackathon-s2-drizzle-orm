@@ -209,7 +209,7 @@ export async function createDockerDB(): Promise<{ connectionString: string; cont
 	await new Promise((resolve) => setTimeout(resolve, 4000));
 
 	return {
-		connectionString: `mysql://root:singlestore@localhost:${port}/`,
+		connectionString: `singlestore://root:singlestore@localhost:${port}/`,
 		container: singlestoreContainer,
 	};
 }
@@ -2040,7 +2040,7 @@ export function tests(driver?: string) {
 			expect(query.sql).toBe('select something as `test` from `users2` order by `test`');
 		});
 
-		test.only('timestamp timezone', async (ctx) => {
+		test('timestamp timezone', async (ctx) => {
 			const { db } = ctx.singlestore;
 
 			const date = new Date(Date.parse('2020-01-01T12:34:56+07:00'));
