@@ -214,10 +214,6 @@ export async function createDockerDB(): Promise<{ connectionString: string; cont
 	};
 }
 
-// afterAll(async () => {
-// 	await singlestoreContainer?.stop().catch(console.error);
-// });
-
 // Tests are slow so we keep track of the test number
 let testRunNumber = 0;
 
