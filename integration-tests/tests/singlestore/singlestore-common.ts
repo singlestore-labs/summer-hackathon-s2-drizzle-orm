@@ -60,7 +60,6 @@ import {
 	varchar,
 	year,
 } from 'drizzle-orm/singlestore-core';
-import type { SingleStoreRemoteDatabase } from 'drizzle-orm/singlestore-proxy';
 import { migrate } from 'drizzle-orm/singlestore/migrator';
 import getPort from 'get-port';
 import { v4 as uuid } from 'uuid';
@@ -74,9 +73,6 @@ declare module 'vitest' {
 	interface TestContext {
 		singlestore: {
 			db: TestSingleStoreDB;
-		};
-		singlestoreProxy: {
-			db: SingleStoreRemoteDatabase;
 		};
 	}
 }
