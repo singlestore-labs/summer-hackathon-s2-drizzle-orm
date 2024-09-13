@@ -1271,11 +1271,19 @@ test('timestamp timezone', async () => {
 
 	await db.insert(usersTable).values({ id: 1, name: 'With default times' });
 	await db.insert(usersTable).values({
+<<<<<<< Updated upstream
 		id: 2,
 		name: 'Without default times',
 		createdAt: date,
 	});
 	const users = await db.select().from(usersTable).orderBy(asc(usersTable.id));
+=======
+		id: 2, 
+		name: 'Without default times',
+		createdAt: date,
+	});
+	const users = await db.select().from(usersTable).orderBy(asc(usersTable.id))
+>>>>>>> Stashed changes
 
 	// check that the timestamps are set correctly for default times
 	expect(Math.abs(users[0]!.createdAt.getTime() - Date.now())).toBeLessThan(2000);
