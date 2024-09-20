@@ -1,12 +1,4 @@
-import {
-	bigint,
-	boolean,
-	primaryKey,
-	serial,
-	singlestoreTable,
-	text,
-	timestamp
-} from 'drizzle-orm/singlestore-core';
+import { bigint, boolean, primaryKey, serial, singlestoreTable, text, timestamp } from 'drizzle-orm/singlestore-core';
 
 import { relations } from 'drizzle-orm';
 

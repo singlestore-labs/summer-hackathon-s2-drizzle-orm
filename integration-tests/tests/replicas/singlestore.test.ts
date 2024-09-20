@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { boolean, singlestoreTable, serial, text, withReplicas } from 'drizzle-orm/singlestore-core';
 import { drizzle } from 'drizzle-orm/singlestore';
+import { boolean, serial, singlestoreTable, text, withReplicas } from 'drizzle-orm/singlestore-core';
 import { describe, expect, it, vi } from 'vitest';
 
 const usersTable = singlestoreTable('users', {
@@ -558,9 +558,9 @@ describe('[transaction] replicas singlestore', () => {
 
 describe('[findFirst] read replicas singlestore', () => {
 	it('primary findFirst', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1, read2]);
 
@@ -578,9 +578,9 @@ describe('[findFirst] read replicas singlestore', () => {
 	});
 
 	it('random replica findFirst', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const randomMockReplica = vi.fn().mockReturnValueOnce(read1).mockReturnValueOnce(read2);
 
@@ -607,8 +607,8 @@ describe('[findFirst] read replicas singlestore', () => {
 	});
 
 	it('single read replica findFirst', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1]);
 
@@ -625,8 +625,8 @@ describe('[findFirst] read replicas singlestore', () => {
 	});
 
 	it('single read replica findFirst + primary findFirst', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1]);
 
@@ -644,9 +644,9 @@ describe('[findFirst] read replicas singlestore', () => {
 	});
 
 	it('always first read findFirst', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1, read2], (replicas) => {
 			return replicas[0]!;
@@ -670,9 +670,9 @@ describe('[findFirst] read replicas singlestore', () => {
 
 describe('[findMany] read replicas singlestore', () => {
 	it('primary findMany', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1, read2]);
 
@@ -691,9 +691,9 @@ describe('[findMany] read replicas singlestore', () => {
 	});
 
 	it('random replica findMany', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const randomMockReplica = vi.fn().mockReturnValueOnce(read1).mockReturnValueOnce(read2);
 
@@ -724,8 +724,8 @@ describe('[findMany] read replicas singlestore', () => {
 	});
 
 	it('single read replica findMany', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1]);
 
@@ -748,8 +748,8 @@ describe('[findMany] read replicas singlestore', () => {
 	});
 
 	it('single read replica findMany + primary findMany', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1]);
 
@@ -774,9 +774,9 @@ describe('[findMany] read replicas singlestore', () => {
 	});
 
 	it('always first read findMany', () => {
-		const primaryDb = drizzle({} as any, { schema: { usersTable }});
-		const read1 = drizzle({} as any, { schema: { usersTable }});
-		const read2 = drizzle({} as any, { schema: { usersTable }});
+		const primaryDb = drizzle({} as any, { schema: { usersTable } });
+		const read1 = drizzle({} as any, { schema: { usersTable } });
+		const read2 = drizzle({} as any, { schema: { usersTable } });
 
 		const db = withReplicas(primaryDb, [read1, read2], (replicas) => {
 			return replicas[0]!;
