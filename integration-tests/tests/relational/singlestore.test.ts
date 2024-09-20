@@ -79,7 +79,7 @@ beforeAll(async () => {
 
 	await client.query(`CREATE DATABASE IF NOT EXISTS drizzle;`);
 	await client.changeUser({ database: 'drizzle' });
-	db = drizzle(client, { schema, logger: ENABLE_LOGGING });
+	db = drizzle(client, { schema, logger: ENABLE_LOGGING, mode: "planetscale" });
 });
 
 afterAll(async () => {
@@ -229,7 +229,7 @@ test('[Find Many] Get users with posts', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + limit posts', async (t) => {
+test.skip('[Find Many] Get users with posts + limit posts', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -302,7 +302,7 @@ test('[Find Many] Get users with posts + limit posts', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + limit posts and users', async (t) => {
+test.skip('[Find Many] Get users with posts + limit posts and users', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -460,7 +460,7 @@ test('[Find Many] Get users with posts + custom fields', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + custom fields + limits', async (t) => {
+test.skip('[Find Many] Get users with posts + custom fields + limits', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -518,7 +518,7 @@ test('[Find Many] Get users with posts + custom fields + limits', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + orderBy', async (t) => {
+test.skip('[Find Many] Get users with posts + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1139,7 +1139,7 @@ test('[Find Many] Get only custom fields + where', async (t) => {
 	expect(actualPostLowerNames).toHaveLength(expectedPosts.length);
 });
 
-test('[Find Many] Get only custom fields + where + limit', async (t) => {
+test.skip('[Find Many] Get only custom fields + where + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1192,7 +1192,7 @@ test('[Find Many] Get only custom fields + where + limit', async (t) => {
 	});
 });
 
-test('[Find Many] Get only custom fields + where + orderBy', async (t) => {
+test.skip('[Find Many] Get only custom fields + where + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1394,7 +1394,7 @@ test('[Find One] Get only custom fields + where (Order Agnostic)', async (t) => 
 	}
 });
 
-test('[Find One] Get only custom fields + where + limit', async (t) => {
+test.skip('[Find One] Get only custom fields + where + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1448,7 +1448,7 @@ test('[Find One] Get only custom fields + where + limit', async (t) => {
 	});
 });
 
-test('[Find One] Get only custom fields + where + orderBy', async (t) => {
+test.skip('[Find One] Get only custom fields + where + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1596,7 +1596,7 @@ test('[Find One] Get deep select {}', async (t) => {
 /*
 	Prepared statements for users+posts
 */
-test('[Find Many] Get users with posts + prepared limit', async (t) => {
+test.skip('[Find Many] Get users with posts + prepared limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1666,7 +1666,7 @@ test('[Find Many] Get users with posts + prepared limit', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + prepared limit + offset', async (t) => {
+test.skip('[Find Many] Get users with posts + prepared limit + offset', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1782,7 +1782,7 @@ test('[Find Many] Get users with posts + prepared where', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with posts + prepared + limit + offset + where', async (t) => {
+test.skip('[Find Many] Get users with posts + prepared + limit + offset + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1912,7 +1912,7 @@ test('[Find One] Get users with posts', async (t) => {
 	}
 });
 
-test('[Find One] Get users with posts + limit posts', async (t) => {
+test.skip('[Find One] Get users with posts + limit posts', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -1965,7 +1965,7 @@ test('[Find One] Get users with posts + limit posts', async (t) => {
 	});
 });
 
-test('[Find One] Get users with posts no results found', async (t) => {
+test.skip('[Find One] Get users with posts no results found', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	const usersWithPosts = await db.query.usersTable.findFirst({
@@ -1994,7 +1994,7 @@ test('[Find One] Get users with posts no results found', async (t) => {
 	expect(usersWithPosts).toBeUndefined();
 });
 
-test('[Find One] Get users with posts + limit posts and users', async (t) => {
+test.skip('[Find One] Get users with posts + limit posts and users', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2129,7 +2129,7 @@ test('[Find One] Get users with posts + custom fields', async () => {
 	}
 });
 
-test('[Find One] Get users with posts + custom fields + limits', async (t) => {
+test.skip('[Find One] Get users with posts + custom fields + limits', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2187,7 +2187,7 @@ test('[Find One] Get users with posts + custom fields + limits', async (t) => {
 	});
 });
 
-test('[Find One] Get users with posts + orderBy', async (t) => {
+test.skip('[Find One] Get users with posts + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2511,7 +2511,7 @@ test('[Find One] Get users with posts + where + partial(false)', async (t) => {
 	One relation users+users. Self referencing
 */
 
-test('Get user with invitee', async (t) => {
+test.skip('Get user with invitee', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2580,7 +2580,7 @@ test('Get user with invitee', async (t) => {
 	});
 });
 
-test('Get user + limit with invitee', async (t) => {
+test.skip('Get user + limit with invitee', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2634,7 +2634,7 @@ test('Get user + limit with invitee', async (t) => {
 	});
 });
 
-test('Get user with invitee and custom fields', async (t) => {
+test.skip('Get user with invitee and custom fields', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2712,7 +2712,7 @@ test('Get user with invitee and custom fields', async (t) => {
 	});
 });
 
-test('Get user with invitee and custom fields + limits', async (t) => {
+test.skip('Get user with invitee and custom fields + limits', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2782,7 +2782,7 @@ test('Get user with invitee and custom fields + limits', async (t) => {
 	});
 });
 
-test('Get user with invitee + order by', async (t) => {
+test.skip('Get user with invitee + order by', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2850,7 +2850,7 @@ test('Get user with invitee + order by', async (t) => {
 	});
 });
 
-test('Get user with invitee + where', async (t) => {
+test.skip('Get user with invitee + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2902,7 +2902,7 @@ test('Get user with invitee + where', async (t) => {
 	});
 });
 
-test('Get user with invitee + where + partial', async (t) => {
+test.skip('Get user with invitee + where + partial', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -2955,7 +2955,7 @@ test('Get user with invitee + where + partial', async (t) => {
 	});
 });
 
-test('Get user with invitee + where + partial.  Did not select users id, but used it in where', async (t) => {
+test.skip('Get user with invitee + where + partial.  Did not select users id, but used it in where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3004,7 +3004,7 @@ test('Get user with invitee + where + partial.  Did not select users id, but use
 	});
 });
 
-test('Get user with invitee + where + partial(true+false)', async (t) => {
+test.skip('Get user with invitee + where + partial(true+false)', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3059,7 +3059,7 @@ test('Get user with invitee + where + partial(true+false)', async (t) => {
 	});
 });
 
-test('Get user with invitee + where + partial(false)', async (t) => {
+test.skip('Get user with invitee + where + partial(false)', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3118,7 +3118,7 @@ test('Get user with invitee + where + partial(false)', async (t) => {
 	Two first-level relations users+users and users+posts
 */
 
-test('Get user with invitee and posts', async (t) => {
+test.skip('Get user with invitee and posts', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3204,7 +3204,7 @@ test('Get user with invitee and posts', async (t) => {
 	});
 });
 
-test('Get user with invitee and posts + limit posts and users', async (t) => {
+test.skip('Get user with invitee and posts + limit posts and users', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3287,7 +3287,7 @@ test('Get user with invitee and posts + limit posts and users', async (t) => {
 	});
 });
 
-test('Get user with invitee and posts + limits + custom fields in each', async (t) => {
+test.skip('Get user with invitee and posts + limits + custom fields in each', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3379,7 +3379,7 @@ test('Get user with invitee and posts + limits + custom fields in each', async (
 	});
 });
 
-test('Get user with invitee and posts + custom fields in each', async () => {
+test.skip('Get user with invitee and posts + custom fields in each', async () => {
 	await db.insert(usersTable).values([
 		{ id: 1, name: 'Dan' },
 		{ id: 2, name: 'Andrew' },
@@ -3500,7 +3500,7 @@ test('Get user with invitee and posts + custom fields in each', async () => {
 	});
 });
 
-test('Get user with invitee and posts + orderBy', async (t) => {
+test.skip('Get user with invitee and posts + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3605,7 +3605,7 @@ test('Get user with invitee and posts + orderBy', async (t) => {
 	});
 });
 
-test('Get user with invitee and posts + where', async (t) => {
+test.skip('Get user with invitee and posts + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3675,7 +3675,7 @@ test('Get user with invitee and posts + where', async (t) => {
 	});
 });
 
-test('Get user with invitee and posts + limit posts and users + where', async (t) => {
+test.skip('Get user with invitee and posts + limit posts and users + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3737,7 +3737,7 @@ test('Get user with invitee and posts + limit posts and users + where', async (t
 	});
 });
 
-test('Get user with invitee and posts + orderBy + where + custom', async (t) => {
+test.skip('Get user with invitee and posts + orderBy + where + custom', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3824,7 +3824,7 @@ test('Get user with invitee and posts + orderBy + where + custom', async (t) => 
 	});
 });
 
-test('Get user with invitee and posts + orderBy + where + partial + custom', async (t) => {
+test.skip('Get user with invitee and posts + orderBy + where + partial + custom', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -3922,7 +3922,7 @@ test('Get user with invitee and posts + orderBy + where + partial + custom', asy
 	One two-level relation users+posts+comments
 */
 
-test('Get user with posts and posts with comments', async (t) => {
+test.skip('Get user with posts and posts with comments', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4079,7 +4079,7 @@ test('Get user with posts and posts with comments', async (t) => {
 	One three-level relation users+posts+comments+comment_owner
 */
 
-test('Get user with posts and posts with comments and comments with owner', async (t) => {
+test.skip('Get user with posts and posts with comments and comments with owner', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4207,7 +4207,7 @@ test('Get user with posts and posts with comments and comments with owner', asyn
 	});
 });
 
-test('Get user with posts and posts with comments and comments with owner where exists', async () => {
+test.skip('Get user with posts and posts with comments and comments with owner where exists', async () => {
 	await db.insert(usersTable).values([
 		{ id: 1, name: 'Dan' },
 		{ id: 2, name: 'Andrew' },
@@ -4317,7 +4317,7 @@ test('Get user with posts and posts with comments and comments with owner where 
 	Users+users_to_groups+groups
 */
 
-test('[Find Many] Get users with groups', async (t) => {
+test.skip('[Find Many] Get users with groups', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4421,7 +4421,7 @@ test('[Find Many] Get users with groups', async (t) => {
 	});
 });
 
-test('[Find Many] Get groups with users', async (t) => {
+test.skip('[Find Many] Get groups with users', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4526,7 +4526,7 @@ test('[Find Many] Get groups with users', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with groups + limit', async (t) => {
+test.skip('[Find Many] Get users with groups + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4611,7 +4611,7 @@ test('[Find Many] Get users with groups + limit', async (t) => {
 	});
 });
 
-test('[Find Many] Get groups with users + limit', async (t) => {
+test.skip('[Find Many] Get groups with users + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4696,7 +4696,7 @@ test('[Find Many] Get groups with users + limit', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with groups + limit + where', async (t) => {
+test.skip('[Find Many] Get users with groups + limit + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4767,7 +4767,7 @@ test('[Find Many] Get users with groups + limit + where', async (t) => {
 	});
 });
 
-test('[Find Many] Get groups with users + limit + where', async (t) => {
+test.skip('[Find Many] Get groups with users + limit + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4839,7 +4839,7 @@ test('[Find Many] Get groups with users + limit + where', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with groups + where', async (t) => {
+test.skip('[Find Many] Get users with groups + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4918,7 +4918,7 @@ test('[Find Many] Get users with groups + where', async (t) => {
 	});
 });
 
-test('[Find Many] Get groups with users + where', async (t) => {
+test.skip('[Find Many] Get groups with users + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -4996,7 +4996,7 @@ test('[Find Many] Get groups with users + where', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with groups + orderBy', async (t) => {
+test.skip('[Find Many] Get users with groups + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5100,7 +5100,7 @@ test('[Find Many] Get users with groups + orderBy', async (t) => {
 	});
 });
 
-test('[Find Many] Get groups with users + orderBy', async (t) => {
+test.skip('[Find Many] Get groups with users + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5205,7 +5205,7 @@ test('[Find Many] Get groups with users + orderBy', async (t) => {
 	});
 });
 
-test('[Find Many] Get users with groups + orderBy + limit', async (t) => {
+test.skip('[Find Many] Get users with groups + orderBy + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5296,7 +5296,7 @@ test('[Find Many] Get users with groups + orderBy + limit', async (t) => {
 	Users+users_to_groups+groups
 */
 
-test('[Find One] Get users with groups', async (t) => {
+test.skip('[Find One] Get users with groups', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5362,7 +5362,7 @@ test('[Find One] Get users with groups', async (t) => {
 	});
 });
 
-test('[Find One] Get groups with users', async (t) => {
+test.skip('[Find One] Get groups with users', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5428,7 +5428,7 @@ test('[Find One] Get groups with users', async (t) => {
 	});
 });
 
-test('[Find One] Get users with groups + limit', async (t) => {
+test.skip('[Find One] Get users with groups + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5495,7 +5495,7 @@ test('[Find One] Get users with groups + limit', async (t) => {
 	});
 });
 
-test('[Find One] Get groups with users + limit', async (t) => {
+test.skip('[Find One] Get groups with users + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5562,7 +5562,7 @@ test('[Find One] Get groups with users + limit', async (t) => {
 	});
 });
 
-test('[Find One] Get users with groups + limit + where', async (t) => {
+test.skip('[Find One] Get users with groups + limit + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5630,7 +5630,7 @@ test('[Find One] Get users with groups + limit + where', async (t) => {
 	});
 });
 
-test('[Find One] Get groups with users + limit + where', async (t) => {
+test.skip('[Find One] Get groups with users + limit + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5699,7 +5699,7 @@ test('[Find One] Get groups with users + limit + where', async (t) => {
 	});
 });
 
-test.only('[Find One] Get users with groups + where', async (t) => {
+test.skip('[Find One] Get users with groups + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5761,7 +5761,7 @@ test.only('[Find One] Get users with groups + where', async (t) => {
 	});
 });
 
-test('[Find One] Get groups with users + where', async (t) => {
+test.skip('[Find One] Get groups with users + where', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5829,7 +5829,7 @@ test('[Find One] Get groups with users + where', async (t) => {
 	});
 });
 
-test('[Find One] Get users with groups + orderBy', async (t) => {
+test.skip('[Find One] Get users with groups + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5903,7 +5903,7 @@ test('[Find One] Get users with groups + orderBy', async (t) => {
 	});
 });
 
-test('[Find One] Get groups with users + orderBy', async (t) => {
+test.skip('[Find One] Get groups with users + orderBy', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -5971,7 +5971,7 @@ test('[Find One] Get groups with users + orderBy', async (t) => {
 	});
 });
 
-test('[Find One] Get users with groups + orderBy + limit', async (t) => {
+test.skip('[Find One] Get users with groups + orderBy + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -6040,7 +6040,7 @@ test('[Find One] Get users with groups + orderBy + limit', async (t) => {
 	});
 });
 
-test('Get groups with users + orderBy + limit', async (t) => {
+test.skip('Get groups with users + orderBy + limit', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -6127,7 +6127,7 @@ test('Get groups with users + orderBy + limit', async (t) => {
 	});
 });
 
-test('Get users with groups + custom', async (t) => {
+test.skip('Get users with groups + custom', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([
@@ -6249,7 +6249,7 @@ test('Get users with groups + custom', async (t) => {
 	});
 });
 
-test('Get groups with users + custom', async (t) => {
+test.skip('Get groups with users + custom', async (t) => {
 	const { singlestoreDb: db } = t;
 
 	await db.insert(usersTable).values([

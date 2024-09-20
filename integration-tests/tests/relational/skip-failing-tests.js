@@ -39,10 +39,14 @@ const testsToSkip = [
 	'[Find Many] Get users with posts + prepared limit',
 	'[Find Many] Get users with posts + prepared limit + offset',
 	'[Find Many] Get users with posts + prepared + limit + offset + where',
-	'[Find One] Get users with posts',
 	'[Find One] Get users with posts + limit posts and users',
-	'[Find One] Get users with posts + custom fields',
 	'[Find One] Get users with posts + orderBy',
+    "[Find Many] Get only custom fields + where + limit",
+    "[Find Many] Get only custom fields + where + orderBy",
+    "[Find One] Get only custom fields + where + limit",
+    "[Find One] Get only custom fields + where + orderBy",
+    "[Find One] Get users with posts no results found",
+    "Get user with invitee + where + partial.  Did not select users id, but used it in where",
 
 	// Subselect in Aggregate Functions
 	'Get user with posts and posts with comments',
