@@ -48,7 +48,7 @@ import {
 	JsonRenameTableStatement,
 	JsonSqliteAddColumnStatement,
 	JsonSqliteCreateTableStatement,
-	JsonStatement
+	JsonStatement,
 } from './jsonStatements';
 import { Dialect } from './schemaValidator';
 import { MySqlSquasher } from './serializer/mysqlSchema';
@@ -3091,7 +3091,6 @@ class SingleStoreDropIndexConvertor extends Convertor {
 		return `DROP INDEX \`${name}\` ON \`${statement.tableName}\`;`;
 	}
 }
-
 
 const convertors: Convertor[] = [];
 convertors.push(new PgCreateTableConvertor());

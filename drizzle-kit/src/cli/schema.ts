@@ -26,8 +26,8 @@ import { dialects } from 'src/schemaValidator';
 import { assertUnreachable } from '../global';
 import { drizzleForSingleStore, prepareSingleStoreSchema, type Setup } from '../serializer/studio';
 import { certs } from '../utils/certs';
-import { grey, MigrateProgress } from './views';
 import { upSinglestoreHandler } from './commands/singlestoreUp';
+import { grey, MigrateProgress } from './views';
 
 const optionDialect = string('dialect')
 	.enum(...dialects)
@@ -320,15 +320,15 @@ export const push = command({
 					force,
 				);
 			} else if (dialect === 'singlestore') {
-					const { singlestorePush } = await import('./commands/push');
-					await singlestorePush(
-						schemaPath,
-						credentials,
-						tablesFilter,
-						strict,
-						verbose,
-						force,
-					);
+				const { singlestorePush } = await import('./commands/push');
+				await singlestorePush(
+					schemaPath,
+					credentials,
+					tablesFilter,
+					strict,
+					verbose,
+					force,
+				);
 			} else {
 				assertUnreachable(dialect);
 			}

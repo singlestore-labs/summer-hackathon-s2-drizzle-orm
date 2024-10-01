@@ -1,4 +1,3 @@
-
 import {
 	any,
 	array,
@@ -11,7 +10,7 @@ import {
 	string,
 	TypeOf,
 	union,
-	ZodTypeAny
+	ZodTypeAny,
 } from 'zod';
 import { applyJsonDiff, diffColumns, diffSchemasOrTables } from './jsonDiffer';
 import { fromJson } from './sqlgenerator';
@@ -57,11 +56,11 @@ import {
 	prepareDeleteCompositePrimaryKeyPg,
 	prepareDeleteCompositePrimaryKeySingleStore,
 	prepareDeleteCompositePrimaryKeySqlite,
+	prepareDeleteSchemasJson as prepareDropSchemasJson,
 	prepareDeleteUniqueConstraintPg as prepareDeleteUniqueConstraint,
 	prepareDropEnumJson,
 	prepareDropIndexesJson,
 	prepareDropReferencesJson,
-	prepareDeleteSchemasJson as prepareDropSchemasJson,
 	prepareDropSequenceJson,
 	prepareDropTableJson,
 	prepareMoveEnumJson,
