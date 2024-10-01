@@ -26,6 +26,7 @@ export default defineConfig({
 					'tests/sqlite/libsql.test.ts',
 					'tests/mysql/tidb-serverless.test.ts',
 					'tests/sqlite/libsql-batch.test.ts',
+
 					'tests/pg/neon-http.test.ts',
 					'tests/pg/neon-http-batch.test.ts',
 				]
