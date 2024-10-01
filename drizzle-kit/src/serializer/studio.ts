@@ -50,7 +50,7 @@ type SchemaFile = {
 
 export type Setup = {
 	dbHash: string;
-	dialect: 'postgresql' | 'mysql' | 'sqlite'| 'singlestore';
+	dialect: 'postgresql' | 'mysql' | 'sqlite' | 'singlestore';
 	driver?: 'aws-data-api' | 'd1-http' | 'turso' | 'pglite';
 	proxy: (params: ProxyParams) => Promise<any[] | any>;
 	customDefaults: CustomDefault[];
