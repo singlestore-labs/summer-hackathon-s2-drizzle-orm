@@ -89,7 +89,7 @@ export const generate = command({
 		} else if (dialect === 'sqlite') {
 			await prepareAndMigrateSqlite(opts);
 		} else if (dialect === 'singlestore') {
-			await prepareAndMigrateSqlite(opts);
+			await prepareAndMigrateSingleStore(opts);
 		} else {
 			assertUnreachable(dialect);
 		}
