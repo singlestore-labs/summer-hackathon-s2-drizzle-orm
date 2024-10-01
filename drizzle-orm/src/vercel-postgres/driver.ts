@@ -42,11 +42,9 @@ export class VercelPgDriver {
 	}
 }
 
-export class VercelPgDatabase<
+export type VercelPgDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends PgDatabase<VercelPgQueryResultHKT, TSchema> {
-	static readonly [entityKind]: string = 'VercelPgDatabase';
-}
+> = PgDatabase<VercelPgQueryResultHKT, TSchema>;
 
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: VercelPgClient,
@@ -75,5 +73,5 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 
 	const driver = new VercelPgDriver(client, dialect, { logger });
 	const session = driver.createSession(schema);
-	return new VercelPgDatabase(dialect, session, schema as any) as VercelPgDatabase<TSchema>;
+	return new PgDatabase(dialect, session, schema) as VercelPgDatabase<TSchema>;
 }

@@ -43,11 +43,9 @@ export class NeonDriver {
 	}
 }
 
-export class NeonDatabase<
+export type NeonDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends PgDatabase<NeonQueryResultHKT, TSchema> {
-	static readonly [entityKind]: string = 'NeonServerlessDatabase';
-}
+> = PgDatabase<NeonQueryResultHKT, TSchema>;
 
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: NeonClient,
@@ -76,5 +74,5 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 
 	const driver = new NeonDriver(client, dialect, { logger });
 	const session = driver.createSession(schema);
-	return new NeonDatabase(dialect, session, schema as any) as NeonDatabase<TSchema>;
+	return new PgDatabase(dialect, session, schema) as NeonDatabase<TSchema>;
 }
