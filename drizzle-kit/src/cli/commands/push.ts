@@ -436,12 +436,11 @@ export const sqlitePush = async (
 			tablesToRemove,
 			tablesToTruncate,
 			infoToPrint,
-			schemasToRemove,
 		} = await sqliteSuggestions(
 			db,
 			statements.statements,
-			statements.squashedPrev,
 			statements.squashedCur,
+			statements.squashedPrev,
 			statements.meta!,
 		);
 
