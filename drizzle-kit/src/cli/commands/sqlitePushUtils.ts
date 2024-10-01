@@ -10,7 +10,7 @@ import {
 } from '../../sqlgenerator';
 
 import type { JsonStatement } from '../../jsonStatements';
-import { findAddedAndRemoved, type SQLiteDB } from '../../utils';
+import type { SQLiteDB } from '../../utils';
 
 export const _moveDataStatements = (
 	tableName: string,
@@ -19,7 +19,16 @@ export const _moveDataStatements = (
 ) => {
 	const statements: string[] = [];
 
-	const newTableName = `__new_${tableName}`;
+	// rename table to __old_${tablename}
+	statements.push(
+		new SqliteRenameTableConvertor().convert({
+			type: 'rename_table',
+			tableNameFrom: tableName,
+			tableNameTo: `__old_push_${tableName}`,
+			fromSchema: '',
+			toSchema: '',
+		}),
+	);
 
 	// create table statement from a new json2 with proper name
 	const tableColumns = Object.values(json.tables[tableName].columns);
@@ -30,11 +39,10 @@ export const _moveDataStatements = (
 
 	const fks = referenceData.map((it) => SQLiteSquasher.unsquashPushFK(it));
 
-	// create new table
 	statements.push(
 		new SQLiteCreateTableConvertor().convert({
 			type: 'sqlite_create_table',
-			tableName: newTableName,
+			tableName: tableName,
 			columns: tableColumns,
 			referenceData: fks,
 			compositePKs,
@@ -43,35 +51,16 @@ export const _moveDataStatements = (
 
 	// move data
 	if (!dataLoss) {
-		const columns = Object.keys(json.tables[tableName].columns).map(
-			(c) => `"${c}"`,
-		);
-
 		statements.push(
-			`INSERT INTO \`${newTableName}\`(${
-				columns.join(
-					', ',
-				)
-			}) SELECT ${columns.join(', ')} FROM \`${tableName}\`;`,
+			`INSERT INTO "${tableName}" SELECT * FROM "__old_push_${tableName}";`,
 		);
 	}
-
+	// drop table with name __old_${tablename}
 	statements.push(
 		new SQLiteDropTableConvertor().convert({
 			type: 'drop_table',
-			tableName: tableName,
+			tableName: `__old_push_${tableName}`,
 			schema: '',
-		}),
-	);
-
-	// rename table
-	statements.push(
-		new SqliteRenameTableConvertor().convert({
-			fromSchema: '',
-			tableNameFrom: newTableName,
-			tableNameTo: tableName,
-			toSchema: '',
-			type: 'rename_table',
 		}),
 	);
 
@@ -131,6 +120,8 @@ export const logSuggestionsAndReturn = async (
 	const schemasToRemove: string[] = [];
 	const tablesToTruncate: string[] = [];
 
+	const tablesContext: Record<string, string[]> = {};
+
 	for (const statement of statements) {
 		if (statement.type === 'drop_table') {
 			const res = await connection.query<{ count: string }>(
@@ -148,157 +139,246 @@ export const logSuggestionsAndReturn = async (
 				tablesToRemove.push(statement.tableName);
 				shouldAskForApprove = true;
 			}
-
-			const fromJsonStatement = fromJson([statement], 'sqlite', 'push');
-			statementsToExecute.push(
-				...(Array.isArray(fromJsonStatement) ? fromJsonStatement : [fromJsonStatement]),
-			);
+			const stmnt = fromJson([statement], 'sqlite')[0];
+			statementsToExecute.push(stmnt);
 		} else if (statement.type === 'alter_table_drop_column') {
-			const tableName = statement.tableName;
-			const columnName = statement.columnName;
+			const newTableName = getOldTableName(statement.tableName, meta);
+
+			const columnIsPartOfPk = Object.values(
+				json1.tables[newTableName].compositePrimaryKeys,
+			).find((c) => SQLiteSquasher.unsquashPK(c).includes(statement.columnName));
+
+			const columnIsPartOfIndex = Object.values(
+				json1.tables[newTableName].indexes,
+			).find((c) => SQLiteSquasher.unsquashIdx(c).columns.includes(statement.columnName));
+
+			const columnIsPk = json1.tables[newTableName].columns[statement.columnName].primaryKey;
+
+			const columnIsPartOfFk = Object.values(
+				json1.tables[newTableName].foreignKeys,
+			).find((t) =>
+				SQLiteSquasher.unsquashPushFK(t).columnsFrom.includes(
+					statement.columnName,
+				)
+			);
 
 			const res = await connection.query<{ count: string }>(
-				`select count(\`${tableName}\`.\`${columnName}\`) as count from \`${tableName}\``,
+				`select count(*) as count from \`${newTableName}\``,
 			);
 			const count = Number(res[0].count);
 			if (count > 0) {
 				infoToPrint.push(
 					`· You're about to delete ${
 						chalk.underline(
-							columnName,
+							statement.columnName,
 						)
-					} column in ${tableName} table with ${count} items`,
+					} column in ${newTableName} table with ${count} items`,
 				);
-				columnsToRemove.push(`${tableName}_${statement.columnName}`);
+				columnsToRemove.push(`${newTableName}_${statement.columnName}`);
 				shouldAskForApprove = true;
 			}
 
-			const fromJsonStatement = fromJson([statement], 'sqlite', 'push');
-			statementsToExecute.push(
-				...(Array.isArray(fromJsonStatement) ? fromJsonStatement : [fromJsonStatement]),
-			);
-		} else if (
-			statement.type === 'sqlite_alter_table_add_column'
-			&& (statement.column.notNull && !statement.column.default)
-		) {
-			const tableName = statement.tableName;
-			const columnName = statement.column.name;
-			const res = await connection.query<{ count: string }>(
-				`select count(*) as count from \`${tableName}\``,
-			);
-			const count = Number(res[0].count);
-			if (count > 0) {
-				infoToPrint.push(
-					`· You're about to add not-null ${
-						chalk.underline(
-							columnName,
+			if (
+				columnIsPk
+				|| columnIsPartOfPk
+				|| columnIsPartOfIndex
+				|| columnIsPartOfFk
+			) {
+				tablesContext[newTableName] = [
+					..._moveDataStatements(statement.tableName, json2, true),
+				];
+				// check table that have fk to this table
+
+				const tablesReferncingCurrent: string[] = [];
+
+				for (const table of Object.values(json1.tables)) {
+					const tablesRefs = Object.values(json1.tables[table.name].foreignKeys)
+						.filter(
+							(t) => SQLiteSquasher.unsquashPushFK(t).tableTo === newTableName,
 						)
-					} column without default value, which contains ${count} items`,
-				);
+						.map((t) => SQLiteSquasher.unsquashPushFK(t).tableFrom);
 
-				tablesToTruncate.push(tableName);
-				statementsToExecute.push(`delete from ${tableName};`);
+					tablesReferncingCurrent.push(...tablesRefs);
+				}
 
-				shouldAskForApprove = true;
+				const uniqueTableRefs = [...new Set(tablesReferncingCurrent)];
+
+				for (const table of uniqueTableRefs) {
+					if (typeof tablesContext[table] === 'undefined') {
+						tablesContext[table] = [..._moveDataStatements(table, json2)];
+					}
+				}
+			} else {
+				if (typeof tablesContext[newTableName] === 'undefined') {
+					const stmnt = fromJson([statement], 'sqlite')[0];
+					statementsToExecute.push(stmnt);
+				}
 			}
-
-			const fromJsonStatement = fromJson([statement], 'sqlite', 'push');
-			statementsToExecute.push(
-				...(Array.isArray(fromJsonStatement) ? fromJsonStatement : [fromJsonStatement]),
-			);
-		} else if (statement.type === 'recreate_table') {
-			const tableName = statement.tableName;
-			const oldTableName = getOldTableName(tableName, meta);
-
-			let dataLoss = false;
-
-			const prevColumnNames = Object.keys(json1.tables[oldTableName].columns);
-			const currentColumnNames = Object.keys(json2.tables[tableName].columns);
-			const { removedColumns, addedColumns } = findAddedAndRemoved(
-				prevColumnNames,
-				currentColumnNames,
-			);
-
-			if (removedColumns.length) {
-				for (const removedColumn of removedColumns) {
-					const res = await connection.query<{ count: string }>(
-						`select count(\`${tableName}\`.\`${removedColumn}\`) as count from \`${tableName}\``,
+		} else if (statement.type === 'sqlite_alter_table_add_column') {
+			const newTableName = getOldTableName(statement.tableName, meta);
+			if (statement.column.notNull && !statement.column.default) {
+				const res = await connection.query<{ count: string }>(
+					`select count(*) as count from \`${newTableName}\``,
+				);
+				const count = Number(res[0].count);
+				if (count > 0) {
+					infoToPrint.push(
+						`· You're about to add not-null ${
+							chalk.underline(
+								statement.column.name,
+							)
+						} column without default value, which contains ${count} items`,
 					);
 
+					tablesToTruncate.push(newTableName);
+					statementsToExecute.push(`delete from ${newTableName};`);
+
+					shouldAskForApprove = true;
+				}
+			}
+			if (statement.column.primaryKey) {
+				tablesContext[newTableName] = [
+					..._moveDataStatements(statement.tableName, json2, true),
+				];
+				const tablesReferncingCurrent: string[] = [];
+
+				for (const table of Object.values(json1.tables)) {
+					const tablesRefs = Object.values(json1.tables[table.name].foreignKeys)
+						.filter(
+							(t) => SQLiteSquasher.unsquashPushFK(t).tableTo === newTableName,
+						)
+						.map((t) => SQLiteSquasher.unsquashPushFK(t).tableFrom);
+
+					tablesReferncingCurrent.push(...tablesRefs);
+				}
+
+				const uniqueTableRefs = [...new Set(tablesReferncingCurrent)];
+
+				for (const table of uniqueTableRefs) {
+					if (typeof tablesContext[table] === 'undefined') {
+						tablesContext[table] = [..._moveDataStatements(table, json2)];
+					}
+				}
+			} else {
+				if (typeof tablesContext[newTableName] === 'undefined') {
+					const stmnt = fromJson([statement], 'sqlite')[0];
+					statementsToExecute.push(stmnt);
+				}
+			}
+		} else if (
+			statement.type === 'alter_table_alter_column_set_type'
+			|| statement.type === 'alter_table_alter_column_set_default'
+			|| statement.type === 'alter_table_alter_column_drop_default'
+			|| statement.type === 'alter_table_alter_column_set_notnull'
+			|| statement.type === 'alter_table_alter_column_drop_notnull'
+			|| statement.type === 'alter_table_alter_column_drop_autoincrement'
+			|| statement.type === 'alter_table_alter_column_set_autoincrement'
+			|| statement.type === 'alter_table_alter_column_drop_pk'
+			|| statement.type === 'alter_table_alter_column_set_pk'
+		) {
+			if (
+				!(
+					statement.type === 'alter_table_alter_column_set_notnull'
+					&& statement.columnPk
+				)
+			) {
+				const newTableName = getOldTableName(statement.tableName, meta);
+				if (
+					statement.type === 'alter_table_alter_column_set_notnull'
+					&& typeof statement.columnDefault === 'undefined'
+				) {
+					const res = await connection.query<{ count: string }>(
+						`select count(*) as count from \`${newTableName}\``,
+					);
 					const count = Number(res[0].count);
 					if (count > 0) {
 						infoToPrint.push(
-							`· You're about to delete ${
+							`· You're about to add not-null constraint to ${
 								chalk.underline(
-									removedColumn,
+									statement.columnName,
 								)
-							} column in ${tableName} table with ${count} items`,
+							} column without default value, which contains ${count} items`,
 						);
-						columnsToRemove.push(removedColumn);
+
+						tablesToTruncate.push(newTableName);
 						shouldAskForApprove = true;
 					}
-				}
-			}
-
-			if (addedColumns.length) {
-				for (const addedColumn of addedColumns) {
-					const [res] = await connection.query<{ count: string }>(
-						`select count(*) as count from \`${tableName}\``,
+					tablesContext[newTableName] = _moveDataStatements(
+						statement.tableName,
+						json1,
+						true,
 					);
-
-					const columnConf = json2.tables[tableName].columns[addedColumn];
-
-					const count = Number(res.count);
-					if (count > 0 && columnConf.notNull && !columnConf.default) {
-						dataLoss = true;
-						infoToPrint.push(
-							`· You're about to add not-null ${
-								chalk.underline(
-									addedColumn,
-								)
-							} column without default value to table, which contains ${count} items`,
+				} else {
+					if (typeof tablesContext[newTableName] === 'undefined') {
+						tablesContext[newTableName] = _moveDataStatements(
+							statement.tableName,
+							json1,
 						);
-						shouldAskForApprove = true;
-						tablesToTruncate.push(tableName);
+					}
+				}
 
-						statementsToExecute.push(`DELETE FROM \`${tableName}\`;`);
+				const tablesReferncingCurrent: string[] = [];
+
+				for (const table of Object.values(json1.tables)) {
+					const tablesRefs = Object.values(json1.tables[table.name].foreignKeys)
+						.filter(
+							(t) => SQLiteSquasher.unsquashPushFK(t).tableTo === newTableName,
+						)
+						.map((t) => {
+							return getNewTableName(
+								SQLiteSquasher.unsquashPushFK(t).tableFrom,
+								meta,
+							);
+						});
+
+					tablesReferncingCurrent.push(...tablesRefs);
+				}
+
+				const uniqueTableRefs = [...new Set(tablesReferncingCurrent)];
+
+				for (const table of uniqueTableRefs) {
+					if (typeof tablesContext[table] === 'undefined') {
+						tablesContext[table] = [..._moveDataStatements(table, json1)];
 					}
 				}
 			}
+		} else if (
+			statement.type === 'create_reference'
+			|| statement.type === 'delete_reference'
+			|| statement.type === 'alter_reference'
+		) {
+			const fk = SQLiteSquasher.unsquashPushFK(statement.data);
 
-			// check if some tables referencing current for pragma
-			const tablesReferencingCurrent: string[] = [];
-
-			for (const table of Object.values(json2.tables)) {
-				const tablesRefs = Object.values(json2.tables[table.name].foreignKeys)
-					.filter((t) => SQLiteSquasher.unsquashPushFK(t).tableTo === tableName)
-					.map((it) => SQLiteSquasher.unsquashPushFK(it).tableFrom);
-
-				tablesReferencingCurrent.push(...tablesRefs);
+			if (typeof tablesContext[statement.tableName] === 'undefined') {
+				tablesContext[statement.tableName] = _moveDataStatements(
+					statement.tableName,
+					json2,
+				);
 			}
-
-			if (!tablesReferencingCurrent.length) {
-				statementsToExecute.push(..._moveDataStatements(tableName, json2, dataLoss));
-				continue;
-			}
-
-			const [{ foreign_keys: pragmaState }] = await connection.query<{
-				foreign_keys: number;
-			}>(`PRAGMA foreign_keys;`);
-
-			if (pragmaState) {
-				statementsToExecute.push(`PRAGMA foreign_keys=OFF;`);
-			}
-			statementsToExecute.push(..._moveDataStatements(tableName, json2, dataLoss));
-			if (pragmaState) {
-				statementsToExecute.push(`PRAGMA foreign_keys=ON;`);
+		} else if (
+			statement.type === 'create_composite_pk'
+			|| statement.type === 'alter_composite_pk'
+			|| statement.type === 'delete_composite_pk'
+			|| statement.type === 'create_unique_constraint'
+			|| statement.type === 'delete_unique_constraint'
+		) {
+			const newTableName = getOldTableName(statement.tableName, meta);
+			if (typeof tablesContext[newTableName] === 'undefined') {
+				tablesContext[newTableName] = _moveDataStatements(
+					statement.tableName,
+					json2,
+				);
 			}
 		} else {
-			const fromJsonStatement = fromJson([statement], 'sqlite', 'push');
-			statementsToExecute.push(
-				...(Array.isArray(fromJsonStatement) ? fromJsonStatement : [fromJsonStatement]),
-			);
+			const stmnt = fromJson([statement], 'sqlite');
+			if (typeof stmnt !== 'undefined') {
+				statementsToExecute.push(...stmnt);
+			}
 		}
+	}
+
+	for (const context of Object.values(tablesContext)) {
+		statementsToExecute.push(...context);
 	}
 
 	return {

@@ -26,7 +26,7 @@ export const outputs = {
 			),
 		noDialect: () =>
 			withStyle.error(
-				`Please specify 'dialect' param in config, either of 'pg', 'mysql', 'sqlite' of 'singlestore'. It will help drizzle to know how to query you database. You can read more about drizzle.config: https://orm.drizzle.team/kit-docs/config-reference`,
+				`Please specify 'dialect' param in config, either of 'pg', 'mysql', 'sqlite' or singlestore`,
 			),
 	},
 	common: {
