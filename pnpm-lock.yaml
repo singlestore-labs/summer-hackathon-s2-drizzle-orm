@@ -45,7 +45,8 @@ importers:
         version: link:drizzle-orm/dist
       drizzle-orm-old:
         specifier: npm:drizzle-orm@^0.27.2
-        version: drizzle-orm@0.27.2(@aws-sdk/client-rds-data@3.583.0)(@cloudflare/workers-types@4.20240524.0)(@libsql/client@0.10.0(bufferutil@4.0.8)(utf-8-validate@6.0.3))(@neondatabase/serverless@0.9.3)(@opentelemetry/api@1.8.0)(@planetscale/database@1.18.0)(@types/better-sqlite3@7.6.10)(@types/pg@8.11.6)(@types/sql.js@1.4.9)(@vercel/postgres@0.8.0)(better-sqlite3@9.6.0)(bun-types@1.0.3)(knex@2.5.1(better-sqlite3@9.6.0)(mysql2@3.3.3)(pg@8.11.5)(sqlite3@5.1.7))(kysely@0.25.0)(mysql2@3.3.3)(pg@8.11.5)(postgres@3.4.4)(sql.js@1.10.3)(sqlite3@5.1.7)
+       version: drizzle-orm@0.27.2(@aws-sdk/client-rds-data@3.583.0)(@cloudflare/workers-types@4.20240524.0)(@libsql/client@0.10.0(bufferutil@4.0.8)(utf-8-validate@6.0.3))(@neondatabase/serverless@0.9.3)(@opentelemetry/api@1.8.0)(@planetscale/database@1.18.0)(@types/better-sqlite3@7.6.10)(@types/pg@8.11.6)(@types/sql.js@1.4.9)(@vercel/postgres@0.8.0)(better-sqlite3@9.6.0)(bun-types@1.0.3)(knex@2.5.1(better-sqlite3@9.6.0)(mysql2@3.3.3)(pg@8.11.5)(sqlite3@5.1.7))(kysely@0.25.0)(mysql2@3.3.3)(pg@8.11.5)(postgres@3.4.4)(sql.js@1.10.3)(sqlite3@5.1.7)
+
       eslint:
         specifier: ^8.50.0
         version: 8.50.0
@@ -182,6 +183,9 @@ importers:
       better-sqlite3:
         specifier: ^9.4.3
         version: 9.6.0
+      bun-types:
+        specifier: ^0.6.6
+        version: 0.6.14
       camelcase:
         specifier: ^7.0.1
         version: 7.0.1
@@ -645,6 +649,9 @@ importers:
         specifier: ^3.20.2
         version: 3.23.7
     devDependencies:
+      '@libsql/client':
+        specifier: ^0.10.0
+        version: 0.10.0(bufferutil@4.0.8)(utf-8-validate@6.0.3)
       '@neondatabase/serverless':
         specifier: 0.9.0
         version: 0.9.0
@@ -15000,7 +15007,7 @@ snapshots:
       pathe: 1.1.2
       picocolors: 1.0.1
       sirv: 2.0.4
-      vitest: 1.6.0(@types/node@18.19.33)(@vitest/ui@1.6.0)(lightningcss@1.25.1)(terser@5.31.0)
+      vitest: 1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(lightningcss@1.25.1)(terser@5.31.0)
 
   '@vitest/utils@1.6.0':
     dependencies:
