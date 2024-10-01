@@ -4,10 +4,7 @@ import { CommonSquashedSchema } from './schemaValidator';
 import { MySqlKitInternals, MySqlSchema, MySqlSquasher } from './serializer/mysqlSchema';
 import { Index, PgSchema, PgSquasher } from './serializer/pgSchema';
 import { SingleStoreKitInternals, SingleStoreSchema, SingleStoreSquasher } from './serializer/singlestoreSchema';
-import {
-	SQLiteKitInternals,
-	SQLiteSquasher
-} from './serializer/sqliteSchema';
+import { SQLiteKitInternals, SQLiteSquasher } from './serializer/sqliteSchema';
 import { AlteredColumn, Column, Sequence, Table } from './snapshotsDiffer';
 
 export interface JsonSqliteCreateTableStatement {

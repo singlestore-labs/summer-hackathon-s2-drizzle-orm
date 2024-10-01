@@ -1,795 +1,687 @@
-import type { AwsDataApiPgQueryResult, AwsDataApiSessionOptions } from 'drizzle-orm/aws-data-api/pg';
-import type { MigrationConfig } from 'drizzle-orm/migrator';
-import type { PreparedQueryConfig } from 'drizzle-orm/pg-core';
-import fetch from 'node-fetch';
-import ws from 'ws';
-import { assertUnreachable } from '../global';
-import type { ProxyParams } from '../serializer/studio';
-import { type DB, normalisePGliteUrl, normaliseSQLiteUrl, type Proxy, type SQLiteDB, type SqliteProxy } from '../utils';
-import { assertPackages, checkPackage } from './utils';
-import type { MysqlCredentials } from './validations/mysql';
+import chalk from 'chalk';
+import { checkHandler } from './commands/check';
+import { assertOrmCoreVersion, assertPackages, assertStudioNodeVersion, ormVersionGt } from './utils';
+import '../@types/utils';
+import { assertV1OutFolder } from '../utils';
+import { dropMigration } from './commands/drop';
+import { upMysqlHandler } from './commands/mysqlUp';
+import { upPgHandler } from './commands/pgUp';
+import { upSqliteHandler } from './commands/sqliteUp';
+import {
+	prepareCheckParams,
+	prepareDropParams,
+	prepareGenerateConfig,
+	prepareMigrateConfig,
+	preparePullConfig,
+	preparePushConfig,
+	prepareStudioConfig,
+} from './commands/utils';
+import { assertCollisions, drivers, prefixes } from './validations/common';
 import { withStyle } from './validations/outputs';
-import type { PostgresCredentials } from './validations/postgres';
-import type { SingleStoreCredentials } from './validations/singlestore';
-import type { SqliteCredentials } from './validations/sqlite';
+import 'dotenv/config';
+import { boolean, command, number, string } from '@drizzle-team/brocli';
+import { mkdirSync } from 'fs';
+import { renderWithTask } from 'hanji';
+import { dialects } from 'src/schemaValidator';
+import { assertUnreachable } from '../global';
+import { drizzleForSingleStore, prepareSingleStoreSchema, type Setup } from '../serializer/studio';
+import { certs } from '../utils/certs';
+import { grey, MigrateProgress } from './views';
+import { upSinglestoreHandler } from './commands/singlestoreUp';
 
-export const preparePostgresDB = async (
-	credentials: PostgresCredentials,
-): Promise<
-	DB & {
-		proxy: Proxy;
-		migrate: (config: string | MigrationConfig) => Promise<void>;
-	}
-> => {
-	if ('driver' in credentials) {
-		const { driver } = credentials;
-		if (driver === 'aws-data-api') {
-			assertPackages('@aws-sdk/client-rds-data');
-			const { RDSDataClient, ExecuteStatementCommand, TypeHint } = await import(
-				'@aws-sdk/client-rds-data'
-			);
-			const { AwsDataApiSession, drizzle } = await import(
-				'drizzle-orm/aws-data-api/pg'
-			);
-			const { migrate } = await import('drizzle-orm/aws-data-api/pg/migrator');
-			const { PgDialect } = await import('drizzle-orm/pg-core');
+const optionDialect = string('dialect')
+	.enum(...dialects)
+	.desc(`Database dialect: 'postgresql', 'mysql', 'sqlite' or 'singlestore'`);
+const optionOut = string().desc("Output folder, 'drizzle' by default");
+const optionConfig = string().desc('Path to drizzle config file');
+const optionBreakpoints = boolean().desc(
+	`Prepare SQL statements with breakpoints`,
+);
 
-			const config: AwsDataApiSessionOptions = {
-				database: credentials.database,
-				resourceArn: credentials.resourceArn,
-				secretArn: credentials.secretArn,
-			};
-			const rdsClient = new RDSDataClient();
-			const session = new AwsDataApiSession(
-				rdsClient,
-				new PgDialect(),
-				undefined,
-				config,
-				undefined,
-			);
+const optionDriver = string()
+	.enum(...drivers)
+	.desc('Database driver');
 
-			const db = drizzle(rdsClient, config);
-			const migrateFn = async (config: string | MigrationConfig) => {
-				return migrate(db, config);
-			};
-
-			const query = async (sql: string, params: any[]) => {
-				const prepared = session.prepareQuery(
-					{ sql, params: params ?? [] },
-					undefined,
-					undefined,
-					false,
-				);
-				const result = await prepared.all();
-				return result as any[];
-			};
-			const proxy = async (params: ProxyParams) => {
-				const prepared = session.prepareQuery<
-					PreparedQueryConfig & {
-						execute: AwsDataApiPgQueryResult<unknown>;
-						values: AwsDataApiPgQueryResult<unknown[]>;
-					}
-				>(
-					{
-						sql: params.sql,
-						params: params.params ?? [],
-						typings: params.typings,
-					},
-					undefined,
-					undefined,
-					params.mode === 'array',
-				);
-				if (params.mode === 'array') {
-					const result = await prepared.values();
-					return result.rows;
-				}
-				const result = await prepared.execute();
-				return result.rows;
-			};
-
-			return {
-				query,
-				proxy,
-				migrate: migrateFn,
-			};
-		}
-
-		if (driver === 'pglite') {
-			assertPackages('@electric-sql/pglite');
-			const { PGlite } = await import('@electric-sql/pglite');
-			const { drizzle } = await import('drizzle-orm/pglite');
-			const { migrate } = await import('drizzle-orm/pglite/migrator');
-
-			const pglite = new PGlite(normalisePGliteUrl(credentials.url));
-			await pglite.waitReady;
-			const drzl = drizzle(pglite);
-			const migrateFn = async (config: MigrationConfig) => {
-				return migrate(drzl, config);
-			};
-
-			const query = async <T>(sql: string, params: any[] = []) => {
-				const result = await pglite.query(sql, params);
-				return result.rows as T[];
-			};
-
-			const proxy = async (params: ProxyParams) => {
-				const preparedParams = preparePGliteParams(params.params);
-				if (
-					params.method === 'values'
-					|| params.method === 'get'
-					|| params.method === 'all'
-				) {
-					const result = await pglite.query(params.sql, preparedParams, {
-						rowMode: params.mode,
-					});
-					return result.rows;
-				}
-
-				const result = await pglite.query(params.sql, preparedParams);
-				return result.rows;
-			};
-
-			return { query, proxy, migrate: migrateFn };
-		}
-
-		assertUnreachable(driver);
-	}
-
-	if (await checkPackage('pg')) {
-		console.log(withStyle.info(`Using 'pg' driver for database querying`));
-		const pg = await import('pg');
-		const { drizzle } = await import('drizzle-orm/node-postgres');
-		const { migrate } = await import('drizzle-orm/node-postgres/migrator');
-
-		const ssl = 'ssl' in credentials
-			? credentials.ssl === 'prefer'
-					|| credentials.ssl === 'require'
-					|| credentials.ssl === 'allow'
-				? { rejectUnauthorized: false }
-				: credentials.ssl === 'verify-full'
-				? {}
-				: credentials.ssl
-			: {};
-
-		const client = 'url' in credentials
-			? new pg.default.Pool({ connectionString: credentials.url, max: 1 })
-			: new pg.default.Pool({ ...credentials, ssl, max: 1 });
-
-		const db = drizzle(client);
-		const migrateFn = async (config: string | MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		const query = async (sql: string, params?: any[]) => {
-			const result = await client.query(sql, params ?? []);
-			return result.rows;
-		};
-
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = await client.query({
-				text: params.sql,
-				values: params.params,
-				...(params.mode === 'array' && { rowMode: 'array' }),
-			});
-			return result.rows;
-		};
-
-		return { query, proxy, migrate: migrateFn };
-	}
-
-	if (await checkPackage('postgres')) {
-		console.log(
-			withStyle.info(`Using 'postgres' driver for database querying`),
+export const generate = command({
+	name: 'generate',
+	options: {
+		config: optionConfig,
+		dialect: optionDialect,
+		driver: optionDriver,
+		schema: string().desc('Path to a schema file or folder'),
+		out: optionOut,
+		name: string().desc('Migration file name'),
+		breakpoints: optionBreakpoints,
+		custom: boolean()
+			.desc('Prepare empty migration file for custom SQL')
+			.default(false),
+		prefix: string()
+			.enum(...prefixes)
+			.default('index'),
+	},
+	transform: async (opts) => {
+		const from = assertCollisions(
+			'generate',
+			opts,
+			['prefix', 'name', 'custom'],
+			['driver', 'breakpoints', 'schema', 'out', 'dialect'],
 		);
-		const postgres = await import('postgres');
-
-		const { drizzle } = await import('drizzle-orm/postgres-js');
-		const { migrate } = await import('drizzle-orm/postgres-js/migrator');
-
-		const client = 'url' in credentials
-			? postgres.default(credentials.url, { max: 1 })
-			: postgres.default({ ...credentials, max: 1 });
-
-		const db = drizzle(client);
-		const migrateFn = async (config: string | MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		const query = async (sql: string, params?: any[]) => {
-			const result = await client.unsafe(sql, params ?? []);
-			return result as any[];
-		};
-
-		const proxy = async (params: ProxyParams) => {
-			if (params.mode === 'object') {
-				return await client.unsafe(params.sql, params.params);
-			}
-			return await client.unsafe(params.sql, params.params).values();
-		};
-
-		return { query, proxy, migrate: migrateFn };
-	}
-
-	if (await checkPackage('@vercel/postgres')) {
-		console.log(
-			withStyle.info(`Using '@vercel/postgres' driver for database querying`),
-		);
-		console.log(
-			withStyle.fullWarning(
-				"'@vercel/postgres' can only connect to remote Neon/Vercel Postgres/Supabase instances through a websocket",
-			),
-		);
-		const { VercelPool } = await import('@vercel/postgres');
-		const { drizzle } = await import('drizzle-orm/vercel-postgres');
-		const { migrate } = await import('drizzle-orm/vercel-postgres/migrator');
-		const ssl = 'ssl' in credentials
-			? credentials.ssl === 'prefer'
-					|| credentials.ssl === 'require'
-					|| credentials.ssl === 'allow'
-				? { rejectUnauthorized: false }
-				: credentials.ssl === 'verify-full'
-				? {}
-				: credentials.ssl
-			: {};
-
-		const client = 'url' in credentials
-			? new VercelPool({ connectionString: credentials.url })
-			: new VercelPool({ ...credentials, ssl });
-
-		await client.connect();
-
-		const db = drizzle(client);
-		const migrateFn = async (config: string | MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		const query = async (sql: string, params?: any[]) => {
-			const result = await client.query(sql, params ?? []);
-			return result.rows;
-		};
-
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = await client.query({
-				text: params.sql,
-				values: params.params,
-				...(params.mode === 'array' && { rowMode: 'array' }),
-			});
-			return result.rows;
-		};
-
-		return { query, proxy, migrate: migrateFn };
-	}
-
-	if (await checkPackage('@neondatabase/serverless')) {
-		console.log(
-			withStyle.info(
-				`Using '@neondatabase/serverless' driver for database querying`,
-			),
-		);
-		console.log(
-			withStyle.fullWarning(
-				"'@neondatabase/serverless' can only connect to remote Neon/Vercel Postgres/Supabase instances through a websocket",
-			),
-		);
-		const { Pool, neonConfig } = await import('@neondatabase/serverless');
-		const { drizzle } = await import('drizzle-orm/neon-serverless');
-		const { migrate } = await import('drizzle-orm/neon-serverless/migrator');
-
-		const ssl = 'ssl' in credentials
-			? credentials.ssl === 'prefer'
-					|| credentials.ssl === 'require'
-					|| credentials.ssl === 'allow'
-				? { rejectUnauthorized: false }
-				: credentials.ssl === 'verify-full'
-				? {}
-				: credentials.ssl
-			: {};
-
-		const client = 'url' in credentials
-			? new Pool({ connectionString: credentials.url, max: 1 })
-			: new Pool({ ...credentials, max: 1, ssl });
-		neonConfig.webSocketConstructor = ws;
-
-		const db = drizzle(client);
-		const migrateFn = async (config: string | MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		const query = async (sql: string, params?: any[]) => {
-			const result = await client.query(sql, params ?? []);
-			return result.rows;
-		};
-
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = await client.query({
-				text: params.sql,
-				values: params.params,
-				...(params.mode === 'array' && { rowMode: 'array' }),
-			});
-			return result.rows;
-		};
-
-		return { query, proxy, migrate: migrateFn };
-	}
-
-	console.error(
-		"To connect to Postgres database - please install either of 'pg', 'postgres', '@neondatabase/serverless' or '@vercel/postgres' drivers",
-	);
-	process.exit(1);
-};
-
-const parseMysqlCredentials = (credentials: MysqlCredentials) => {
-	if ('url' in credentials) {
-		const url = credentials.url;
-
-		const connectionUrl = new URL(url);
-		const pathname = connectionUrl.pathname;
-
-		const database = pathname.split('/')[pathname.split('/').length - 1];
-		if (!database) {
-			console.error(
-				'You should specify a database name in connection string (mysql://USER:PASSWORD@HOST:PORT/DATABASE)',
-			);
-			process.exit(1);
-		}
-		return { database, url };
-	} else {
-		return {
-			database: credentials.database,
-			credentials,
-		};
-	}
-};
-
-export const connectToMySQL = async (
-	it: MysqlCredentials,
-): Promise<{
-	db: DB;
-	proxy: Proxy;
-	database: string;
-	migrate: (config: MigrationConfig) => Promise<void>;
-}> => {
-	const result = parseMysqlCredentials(it);
-
-	if (await checkPackage('mysql2')) {
-		const { createConnection } = await import('mysql2/promise');
-		const { drizzle } = await import('drizzle-orm/mysql2');
-		const { migrate } = await import('drizzle-orm/mysql2/migrator');
-
-		const connection = result.url
-			? await createConnection(result.url)
-			: await createConnection(result.credentials!); // needed for some reason!
-
-		const db = drizzle(connection);
-		const migrateFn = async (config: MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		await connection.connect();
-		const query: DB['query'] = async <T>(
-			sql: string,
-			params?: any[],
-		): Promise<T[]> => {
-			const res = await connection.execute(sql, params);
-			return res[0] as any;
-		};
-
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = await connection.query({
-				sql: params.sql,
-				values: params.params,
-				rowsAsArray: params.mode === 'array',
-			});
-			return result[0] as any[];
-		};
-
-		return {
-			db: { query },
-			proxy,
-			database: result.database,
-			migrate: migrateFn,
-		};
-	}
-
-	if (await checkPackage('@planetscale/database')) {
-		const { connect } = await import('@planetscale/database');
-		const { drizzle } = await import('drizzle-orm/planetscale-serverless');
-		const { migrate } = await import(
-			'drizzle-orm/planetscale-serverless/migrator'
-		);
-
-		const connection = connect(result);
-
-		const db = drizzle(connection);
-		const migrateFn = async (config: MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		const query = async <T>(sql: string, params?: any[]): Promise<T[]> => {
-			const res = await connection.execute(sql, params);
-			return res.rows as T[];
-		};
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = params.mode === 'object'
-				? await connection.execute(params.sql, params.params)
-				: await connection.execute(params.sql, params.params, {
-					as: 'array',
-				});
-			return result.rows;
-		};
-
-		return {
-			db: { query },
-			proxy,
-			database: result.database,
-			migrate: migrateFn,
-		};
-	}
-
-	console.error(
-		"To connect to SingleStore database - please install the 'mysql2' driver",
-	);
-	process.exit(1);
-};
-
-const parseSingleStoreCredentials = (credentials: SingleStoreCredentials) => {
-	if ('url' in credentials) {
-		const url = credentials.url;
-
-		const connectionUrl = new URL(url);
-		const pathname = connectionUrl.pathname;
-
-		const database = pathname.split('/')[pathname.split('/').length - 1];
-		if (!database) {
-			console.error(
-				'You should specify a database name in connection string (singlestore://USER:PASSWORD@HOST:PORT/DATABASE)',
-			);
-			process.exit(1);
-		}
-		return { database, url };
-	} else {
-		return {
-			database: credentials.database,
-			credentials,
-		};
-	}
-};
-
-export const connectToSingleStore = async (
-	it: SingleStoreCredentials,
-): Promise<{
-	db: DB;
-	proxy: Proxy;
-	database: string;
-	migrate: (config: MigrationConfig) => Promise<void>;
-}> => {
-	const result = parseSingleStoreCredentials(it);
-
-	if (await checkPackage('mysql2')) {
-		const { createConnection } = await import('mysql2/promise');
-		const { drizzle } = await import('drizzle-orm/singlestore');
-		const { migrate } = await import('drizzle-orm/singlestore/migrator');
-
-		const connection = result.url
-			? await createConnection(result.url)
-			: await createConnection(result.credentials!); // needed for some reason!
-
-		const db = drizzle(connection);
-		const migrateFn = async (config: MigrationConfig) => {
-			return migrate(db, config);
-		};
-
-		await connection.connect();
-		const query: DB['query'] = async <T>(
-			sql: string,
-			params?: any[],
-		): Promise<T[]> => {
-			const res = await connection.execute(sql, params);
-			return res[0] as any;
-		};
-
-		const proxy: Proxy = async (params: ProxyParams) => {
-			const result = await connection.query({
-				sql: params.sql,
-				values: params.params,
-				rowsAsArray: params.mode === 'array',
-			});
-			return result[0] as any[];
-		};
-
-		return {
-			db: { query },
-			proxy,
-			database: result.database,
-			migrate: migrateFn,
-		};
-	}
-
-	console.error(
-		"To connect to SingleStore database - please install the 'mysql2' driver",
-	);
-	process.exit(1);
-};
-
-const prepareSqliteParams = (params: any[], driver?: string) => {
-	return params.map((param) => {
-		if (
-			param
-			&& typeof param === 'object'
-			&& 'type' in param
-			&& 'value' in param
-			&& param.type === 'binary'
-		) {
-			const value = typeof param.value === 'object'
-				? JSON.stringify(param.value)
-				: (param.value as string);
-
-			if (driver === 'd1-http') {
-				return value;
-			}
-
-			return Buffer.from(value);
-		}
-		return param;
-	});
-};
-
-const preparePGliteParams = (params: any[]) => {
-	return params.map((param) => {
-		if (
-			param
-			&& typeof param === 'object'
-			&& 'type' in param
-			&& 'value' in param
-			&& param.type === 'binary'
-		) {
-			const value = typeof param.value === 'object'
-				? JSON.stringify(param.value)
-				: (param.value as string);
-
-			return value;
-		}
-		return param;
-	});
-};
-
-export const connectToSQLite = async (
-	credentials: SqliteCredentials,
-): Promise<
-	& SQLiteDB
-	& SqliteProxy
-	& { migrate: (config: MigrationConfig) => Promise<void> }
-> => {
-	if ('driver' in credentials) {
-		const { driver } = credentials;
-		if (driver === 'turso') {
-			assertPackages('@libsql/client');
-			const { createClient } = await import('@libsql/client');
-			const { drizzle } = await import('drizzle-orm/libsql');
-			const { migrate } = await import('drizzle-orm/libsql/migrator');
-
-			const client = createClient({
-				url: credentials.url,
-				authToken: credentials.authToken,
-			});
-
-			const drzl = drizzle(client);
-			const migrateFn = async (config: MigrationConfig) => {
-				return migrate(drzl, config);
-			};
-
-			const db: SQLiteDB = {
-				query: async <T>(sql: string, params?: any[]) => {
-					const res = await client.execute({ sql, args: params || [] });
-					return res.rows as T[];
-				},
-				run: async (query: string) => {
-					await client.execute(query);
-				},
-				batch: async (
-					queries: { query: string; values?: any[] | undefined }[],
-				) => {
-					await client.batch(
-						queries.map((it) => ({ sql: it.query, args: it.values ?? [] })),
-					);
-				},
-			};
-			const proxy: SqliteProxy = {
-				proxy: async (params: ProxyParams) => {
-					const preparedParams = prepareSqliteParams(params.params);
-					const result = await client.execute({
-						sql: params.sql,
-						args: preparedParams,
-					});
-
-					if (params.mode === 'array') {
-						return result.rows.map((row) => Object.values(row));
-					} else {
-						return result.rows;
-					}
-				},
-			};
-
-			return { ...db, ...proxy, migrate: migrateFn };
-		} else if (driver === 'd1-http') {
-			const { drizzle } = await import('drizzle-orm/sqlite-proxy');
-			const { migrate } = await import('drizzle-orm/sqlite-proxy/migrator');
-
-			const remoteCallback: Parameters<typeof drizzle>[0] = async (
-				sql,
-				params,
-				method,
-			) => {
-				const res = await fetch(
-					`https://api.cloudflare.com/client/v4/accounts/${credentials.accountId}/d1/database/${credentials.databaseId}/${
-						method === 'values' ? 'raw' : 'query'
-					}`,
-					{
-						method: 'POST',
-						body: JSON.stringify({ sql, params }),
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${credentials.token}`,
-						},
-					},
-				);
-
-				const data = (await res.json()) as
-					| {
-						success: true;
-						result: {
-							results:
-								| any[]
-								| {
-									columns: string[];
-									rows: any[][];
-								};
-						}[];
-					}
-					| {
-						success: false;
-						errors: { code: number; message: string }[];
-					};
-
-				if (!data.success) {
-					throw new Error(
-						data.errors.map((it) => `${it.code}: ${it.message}`).join('\n'),
-					);
-				}
-
-				const result = data.result[0].results;
-				const rows = Array.isArray(result) ? result : result.rows;
-
-				return {
-					rows,
-				};
-			};
-
-			const drzl = drizzle(remoteCallback);
-			const migrateFn = async (config: MigrationConfig) => {
-				return migrate(
-					drzl,
-					async (queries) => {
-						for (const query of queries) {
-							await remoteCallback(query, [], 'run');
-						}
-					},
-					config,
-				);
-			};
-
-			const db: SQLiteDB = {
-				query: async <T>(sql: string, params?: any[]) => {
-					const res = await remoteCallback(sql, params || [], 'all');
-					return res.rows as T[];
-				},
-				run: async (query: string) => {
-					await remoteCallback(query, [], 'run');
-				},
-			};
-			const proxy: SqliteProxy = {
-				proxy: async (params: ProxyParams) => {
-					const preparedParams = prepareSqliteParams(params.params, 'd1-http');
-					const result = await remoteCallback(
-						params.sql,
-						preparedParams,
-						params.mode === 'array' ? 'values' : 'all',
-					);
-
-					return result.rows;
-				},
-			};
-			return { ...db, ...proxy, migrate: migrateFn };
+		return prepareGenerateConfig(opts, from);
+	},
+	handler: async (opts) => {
+		await assertOrmCoreVersion();
+		await assertPackages('drizzle-orm');
+
+		// const parsed = cliConfigGenerate.parse(opts);
+
+		const {
+			prepareAndMigratePg,
+			prepareAndMigrateMysql,
+			prepareAndMigrateSqlite,
+			prepareAndMigrateSingleStore,
+		} = await import('./commands/migrate');
+
+		const dialect = opts.dialect;
+		if (dialect === 'postgresql') {
+			await prepareAndMigratePg(opts);
+		} else if (dialect === 'mysql') {
+			await prepareAndMigrateMysql(opts);
+		} else if (dialect === 'sqlite') {
+			await prepareAndMigrateSqlite(opts);
+		} else if (dialect === 'singlestore') {
+			await prepareAndMigrateSqlite(opts);
 		} else {
-			assertUnreachable(driver);
+			assertUnreachable(dialect);
 		}
-	}
+	},
+});
 
-	if (await checkPackage('@libsql/client')) {
-		const { createClient } = await import('@libsql/client');
-		const { drizzle } = await import('drizzle-orm/libsql');
-		const { migrate } = await import('drizzle-orm/libsql/migrator');
+export const migrate = command({
+	name: 'migrate',
+	options: {
+		config: optionConfig,
+	},
+	transform: async (opts) => {
+		return await prepareMigrateConfig(opts.config);
+	},
+	handler: async (opts) => {
+		await assertOrmCoreVersion();
+		await assertPackages('drizzle-orm');
 
-		const client = createClient({
-			url: normaliseSQLiteUrl(credentials.url, 'libsql'),
-		});
-		const drzl = drizzle(client);
-		const migrateFn = async (config: MigrationConfig) => {
-			return migrate(drzl, config);
-		};
-
-		const db: SQLiteDB = {
-			query: async <T>(sql: string, params?: any[]) => {
-				const res = await client.execute({ sql, args: params || [] });
-				return res.rows as T[];
-			},
-			run: async (query: string) => {
-				await client.execute(query);
-			},
-		};
-
-		const proxy: SqliteProxy = {
-			proxy: async (params: ProxyParams) => {
-				const preparedParams = prepareSqliteParams(params.params);
-				const result = await client.execute({
-					sql: params.sql,
-					args: preparedParams,
-				});
-
-				if (params.mode === 'array') {
-					return result.rows.map((row) => Object.values(row));
-				} else {
-					return result.rows;
+		const { dialect, schema, table, out, credentials } = opts;
+		try {
+			if (dialect === 'postgresql') {
+				if ('driver' in credentials) {
+					const { driver } = credentials;
+					if (driver === 'aws-data-api') {
+						if (!(await ormVersionGt('0.30.10'))) {
+							console.log(
+								"To use 'aws-data-api' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else if (driver === 'pglite') {
+						if (!(await ormVersionGt('0.30.6'))) {
+							console.log(
+								"To use 'pglite' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else {
+						assertUnreachable(driver);
+					}
 				}
-			},
-		};
+				const { preparePostgresDB } = await import('./connections');
+				const { migrate } = await preparePostgresDB(credentials);
+				await renderWithTask(
+					new MigrateProgress(),
+					migrate({
+						migrationsFolder: out,
+						migrationsTable: table,
+						migrationsSchema: schema,
+					}),
+				);
+			} else if (dialect === 'mysql') {
+				const { connectToMySQL } = await import('./connections');
+				const { migrate } = await connectToMySQL(credentials);
+				await renderWithTask(
+					new MigrateProgress(),
+					migrate({
+						migrationsFolder: out,
+						migrationsTable: table,
+						migrationsSchema: schema,
+					}),
+				);
+			} else if (dialect === 'singlestore') {
+				const { connectToSingleStore } = await import('./connections');
+				const { migrate } = await connectToSingleStore(credentials);
+				await renderWithTask(
+					new MigrateProgress(),
+					migrate({
+						migrationsFolder: out,
+						migrationsTable: table,
+						migrationsSchema: schema,
+					}),
+				);
+			} else if (dialect === 'sqlite') {
+				const { connectToSQLite } = await import('./connections');
+				const { migrate } = await connectToSQLite(credentials);
+				await renderWithTask(
+					new MigrateProgress(),
+					migrate({
+						migrationsFolder: opts.out,
+						migrationsTable: table,
+						migrationsSchema: schema,
+					}),
+				);
+			} else {
+				assertUnreachable(dialect);
+			}
+		} catch (e) {
+			console.error(e);
+			process.exit(1);
+		}
 
-		return { ...db, ...proxy, migrate: migrateFn };
-	}
+		process.exit(0);
+	},
+});
 
-	if (await checkPackage('better-sqlite3')) {
-		const { default: Database } = await import('better-sqlite3');
-		const { drizzle } = await import('drizzle-orm/better-sqlite3');
-		const { migrate } = await import('drizzle-orm/better-sqlite3/migrator');
+const optionsFilters = {
+	tablesFilter: string().desc('Table name filters'),
+	schemaFilters: string().desc('Schema name filters'),
+	extensionsFilters: string().desc(
+		'`Database extensions internal database filters',
+	),
+} as const;
 
-		const sqlite = new Database(
-			normaliseSQLiteUrl(credentials.url, 'better-sqlite'),
+const optionsDatabaseCredentials = {
+	url: string().desc('Database connection URL'),
+	host: string().desc('Database host'),
+	port: string().desc('Database port'),
+	user: string().desc('Database user'),
+	password: string().desc('Database password'),
+	database: string().desc('Database name'),
+	ssl: string().desc('ssl mode'),
+	// Turso
+	authToken: string('auth-token').desc('Database auth token [Turso]'),
+	// specific cases
+	driver: optionDriver,
+} as const;
+
+export const push = command({
+	name: 'push',
+	options: {
+		config: optionConfig,
+		dialect: optionDialect,
+		schema: string().desc('Path to a schema file or folder'),
+		...optionsFilters,
+		...optionsDatabaseCredentials,
+		verbose: boolean()
+			.desc('Print all statements for each push')
+			.default(false),
+		strict: boolean().desc('Always ask for confirmation').default(false),
+		force: boolean()
+			.desc(
+				'Auto-approve all data loss statements. Note: Data loss statements may truncate your tables and data',
+			)
+			.default(false),
+	},
+	transform: async (opts) => {
+		const from = assertCollisions(
+			'push',
+			opts,
+			['force', 'verbose', 'strict'],
+			[
+				'schema',
+				'dialect',
+				'driver',
+				'url',
+				'host',
+				'port',
+				'user',
+				'password',
+				'database',
+				'ssl',
+				'authToken',
+				'schemaFilters',
+				'extensionsFilters',
+				'tablesFilter',
+			],
 		);
-		const drzl = drizzle(sqlite);
-		const migrateFn = async (config: MigrationConfig) => {
-			return migrate(drzl, config);
-		};
 
-		const db: SQLiteDB = {
-			query: async <T>(sql: string, params: any[] = []) => {
-				return sqlite.prepare(sql).bind(params).all() as T[];
-			},
-			run: async (query: string) => {
-				sqlite.prepare(query).run();
-			},
-		};
+		return preparePushConfig(opts, from);
+	},
+	handler: async (config) => {
+		await assertPackages('drizzle-orm');
+		await assertOrmCoreVersion();
 
-		const proxy: SqliteProxy = {
-			proxy: async (params: ProxyParams) => {
-				const preparedParams = prepareSqliteParams(params.params);
-				if (
-					params.method === 'values'
-					|| params.method === 'get'
-					|| params.method === 'all'
-				) {
-					return sqlite
-						.prepare(params.sql)
-						.raw(params.mode === 'array')
-						.all(preparedParams);
+		const {
+			dialect,
+			schemaPath,
+			strict,
+			verbose,
+			credentials,
+			tablesFilter,
+			schemasFilter,
+			force,
+		} = config;
+
+		try {
+			if (dialect === 'mysql') {
+				const { mysqlPush } = await import('./commands/push');
+				await mysqlPush(
+					schemaPath,
+					credentials,
+					tablesFilter,
+					strict,
+					verbose,
+					force,
+				);
+			} else if (dialect === 'postgresql') {
+				if ('driver' in credentials) {
+					const { driver } = credentials;
+					if (driver === 'aws-data-api') {
+						if (!(await ormVersionGt('0.30.10'))) {
+							console.log(
+								"To use 'aws-data-api' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else if (driver === 'pglite') {
+						if (!(await ormVersionGt('0.30.6'))) {
+							console.log(
+								"To use 'pglite' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else {
+						assertUnreachable(driver);
+					}
 				}
 
-				return sqlite.prepare(params.sql).run(preparedParams);
-			},
-		};
-		return { ...db, ...proxy, migrate: migrateFn };
-	}
-	console.log(
-		"Please install either 'better-sqlite3' or '@libsql/client' for Drizzle Kit to connect to SQLite databases",
-	);
-	process.exit(1);
-};
+				const { pgPush } = await import('./commands/push');
+				await pgPush(
+					schemaPath,
+					verbose,
+					strict,
+					credentials,
+					tablesFilter,
+					schemasFilter,
+					force,
+				);
+			} else if (dialect === 'sqlite') {
+				const { sqlitePush } = await import('./commands/push');
+				await sqlitePush(
+					schemaPath,
+					verbose,
+					strict,
+					credentials,
+					tablesFilter,
+					force,
+				);
+			} else if (dialect === 'singlestore') {
+					const { singlestorePush } = await import('./commands/push');
+					await singlestorePush(
+						schemaPath,
+						credentials,
+						tablesFilter,
+						strict,
+						verbose,
+						force,
+					);
+			} else {
+				assertUnreachable(dialect);
+			}
+		} catch (e) {
+			console.error(e);
+		}
+		process.exit(0);
+	},
+});
+
+export const check = command({
+	name: 'check',
+	options: {
+		config: optionConfig,
+		dialect: optionDialect,
+		out: optionOut,
+	},
+	transform: async (opts) => {
+		const from = assertCollisions('check', opts, [], ['dialect', 'out']);
+		return prepareCheckParams(opts, from);
+	},
+	handler: async (config) => {
+		await assertOrmCoreVersion();
+
+		const { out, dialect } = config;
+		checkHandler(out, dialect);
+		console.log("Everything's fine 🐶🔥");
+	},
+});
+
+export const up = command({
+	name: 'up',
+	options: {
+		config: optionConfig,
+		dialect: optionDialect,
+		out: optionOut,
+	},
+	transform: async (opts) => {
+		const from = assertCollisions('check', opts, [], ['dialect', 'out']);
+		return prepareCheckParams(opts, from);
+	},
+	handler: async (config) => {
+		await assertOrmCoreVersion();
+
+		const { out, dialect } = config;
+		await assertPackages('drizzle-orm');
+
+		if (dialect === 'postgresql') {
+			upPgHandler(out);
+		}
+
+		if (dialect === 'mysql') {
+			upMysqlHandler(out);
+		}
+
+		if (dialect === 'sqlite') {
+			upSqliteHandler(out);
+		}
+
+		if (dialect === 'singlestore') {
+			upSinglestoreHandler(out);
+		}
+	},
+});
+
+export const pull = command({
+	name: 'introspect',
+	aliases: ['pull'],
+	options: {
+		config: optionConfig,
+		dialect: optionDialect,
+		out: optionOut,
+		breakpoints: optionBreakpoints,
+		casing: string('introspect-casing').enum('camel', 'preserve'),
+		...optionsFilters,
+		...optionsDatabaseCredentials,
+	},
+	transform: async (opts) => {
+		const from = assertCollisions(
+			'introspect',
+			opts,
+			[],
+			[
+				'dialect',
+				'driver',
+				'out',
+				'url',
+				'host',
+				'port',
+				'user',
+				'password',
+				'database',
+				'ssl',
+				'authToken',
+				'casing',
+				'breakpoints',
+				'tablesFilter',
+				'schemaFilters',
+				'extensionsFilters',
+			],
+		);
+		return preparePullConfig(opts, from);
+	},
+	handler: async (config) => {
+		await assertPackages('drizzle-orm');
+		await assertOrmCoreVersion();
+
+		const {
+			dialect,
+			credentials,
+			out,
+			casing,
+			breakpoints,
+			tablesFilter,
+			schemasFilter,
+			prefix,
+		} = config;
+		mkdirSync(out, { recursive: true });
+
+		console.log(
+			grey(
+				`Pulling from [${
+					schemasFilter
+						.map((it) => `'${it}'`)
+						.join(', ')
+				}] list of schemas`,
+			),
+		);
+		console.log();
+
+		try {
+			if (dialect === 'postgresql') {
+				if ('driver' in credentials) {
+					const { driver } = credentials;
+					if (driver === 'aws-data-api') {
+						if (!(await ormVersionGt('0.30.10'))) {
+							console.log(
+								"To use 'aws-data-api' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else if (driver === 'pglite') {
+						if (!(await ormVersionGt('0.30.6'))) {
+							console.log(
+								"To use 'pglite' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else {
+						assertUnreachable(driver);
+					}
+				}
+
+				const { introspectPostgres } = await import('./commands/introspect');
+				await introspectPostgres(
+					casing,
+					out,
+					breakpoints,
+					credentials,
+					tablesFilter,
+					schemasFilter,
+					prefix,
+				);
+			} else if (dialect === 'mysql') {
+				const { introspectMysql } = await import('./commands/introspect');
+				await introspectMysql(
+					casing,
+					out,
+					breakpoints,
+					credentials,
+					tablesFilter,
+					prefix,
+				);
+			} else if (dialect === 'sqlite') {
+				const { introspectSqlite } = await import('./commands/introspect');
+				await introspectSqlite(
+					casing,
+					out,
+					breakpoints,
+					credentials,
+					tablesFilter,
+					prefix,
+				);
+			} else if (dialect === 'singlestore') {
+				const { introspectSingleStore } = await import('./commands/introspect');
+				await introspectSingleStore(
+					casing,
+					out,
+					breakpoints,
+					credentials,
+					tablesFilter,
+					prefix,
+				);
+			} else {
+				assertUnreachable(dialect);
+			}
+		} catch (e) {
+			console.error(e);
+		}
+		process.exit(0);
+	},
+});
+
+export const drop = command({
+	name: 'drop',
+	options: {
+		config: optionConfig,
+		out: optionOut,
+		driver: optionDriver,
+	},
+	transform: async (opts) => {
+		const from = assertCollisions('check', opts, [], ['driver', 'out']);
+		return prepareDropParams(opts, from);
+	},
+	handler: async (config) => {
+		await assertOrmCoreVersion();
+
+		assertV1OutFolder(config.out);
+		await dropMigration(config);
+	},
+});
+
+export const studio = command({
+	name: 'studio',
+	options: {
+		config: optionConfig,
+		port: number().desc('Custom port for drizzle studio [default=4983]'),
+		host: string().desc('Custom host for drizzle studio [default=0.0.0.0]'),
+		verbose: boolean()
+			.default(false)
+			.desc('Print all stataments that are executed by Studio'),
+	},
+	handler: async (opts) => {
+		await assertOrmCoreVersion();
+		await assertPackages('drizzle-orm');
+
+		assertStudioNodeVersion();
+
+		const {
+			dialect,
+			schema: schemaPath,
+			port,
+			host,
+			credentials,
+		} = await prepareStudioConfig(opts);
+
+		const {
+			drizzleForPostgres,
+			preparePgSchema,
+			prepareMySqlSchema,
+			drizzleForMySQL,
+			prepareSQLiteSchema,
+			drizzleForSQLite,
+			prepareSingleStoreSchema,
+			drizzleForSingleStore,
+		} = await import('../serializer/studio');
+
+		let setup: Setup;
+		try {
+			if (dialect === 'postgresql') {
+				if ('driver' in credentials) {
+					const { driver } = credentials;
+					if (driver === 'aws-data-api') {
+						if (!(await ormVersionGt('0.30.10'))) {
+							console.log(
+								"To use 'aws-data-api' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else if (driver === 'pglite') {
+						if (!(await ormVersionGt('0.30.6'))) {
+							console.log(
+								"To use 'pglite' driver - please update drizzle-orm to the latest version",
+							);
+							process.exit(1);
+						}
+					} else {
+						assertUnreachable(driver);
+					}
+				}
+
+				const { schema, relations, files } = schemaPath
+					? await preparePgSchema(schemaPath)
+					: { schema: {}, relations: {}, files: [] };
+				setup = await drizzleForPostgres(credentials, schema, relations, files);
+			} else if (dialect === 'mysql') {
+				const { schema, relations, files } = schemaPath
+					? await prepareMySqlSchema(schemaPath)
+					: { schema: {}, relations: {}, files: [] };
+				setup = await drizzleForMySQL(credentials, schema, relations, files);
+			} else if (dialect === 'sqlite') {
+				const { schema, relations, files } = schemaPath
+					? await prepareSQLiteSchema(schemaPath)
+					: { schema: {}, relations: {}, files: [] };
+				setup = await drizzleForSQLite(credentials, schema, relations, files);
+			} else if (dialect === 'singlestore') {
+				const { schema, relations, files } = schemaPath
+					? await prepareSingleStoreSchema(schemaPath)
+					: { schema: {}, relations: {}, files: [] };
+				setup = await drizzleForSingleStore(credentials, schema, relations, files);
+			} else {
+				assertUnreachable(dialect);
+			}
+
+			const { prepareServer } = await import('../serializer/studio');
+
+			const server = await prepareServer(setup);
+
+			console.log();
+			console.log(
+				withStyle.fullWarning(
+					'Drizzle Studio is currently in Beta. If you find anything that is not working as expected or should be improved, feel free to create an issue on GitHub: https://github.com/drizzle-team/drizzle-kit-mirror/issues/new or write to us on Discord: https://discord.gg/WcRKz2FFxN',
+				),
+			);
+
+			const { key, cert } = (await certs()) || {};
+			server.start({
+				host,
+				port,
+				key,
+				cert,
+				cb: (err, address) => {
+					if (err) {
+						console.error(err);
+					} else {
+						const queryParams: { port?: number; host?: string } = {};
+						if (port !== 4983) {
+							queryParams.port = port;
+						}
+
+						if (host !== '127.0.0.1') {
+							queryParams.host = host;
+						}
+
+						const queryString = Object.keys(queryParams)
+							.map((key: keyof { port?: number; host?: string }) => {
+								return `${key}=${queryParams[key]}`;
+							})
+							.join('&');
+
+						console.log(
+							`\nDrizzle Studio is up and running on ${
+								chalk.blue(
+									`https://local.drizzle.studio${queryString ? `?${queryString}` : ''}`,
+								)
+							}`,
+						);
+					}
+				},
+			});
+		} catch (e) {
+			console.error(e);
+			process.exit(0);
+		}
+	},
+});
