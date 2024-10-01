@@ -34,11 +34,9 @@ export class PgliteDriver {
 	}
 }
 
-export class PgliteDatabase<
+export type PgliteDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends PgDatabase<PgliteQueryResultHKT, TSchema> {
-	static readonly [entityKind]: string = 'PgliteDatabase';
-}
+> = PgDatabase<PgliteQueryResultHKT, TSchema>;
 
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: PgliteClient,
@@ -67,5 +65,5 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 
 	const driver = new PgliteDriver(client, dialect, { logger });
 	const session = driver.createSession(schema);
-	return new PgliteDatabase(dialect, session, schema as any) as PgliteDatabase<TSchema>;
+	return new PgDatabase(dialect, session, schema) as PgliteDatabase<TSchema>;
 }

@@ -1,6 +1,5 @@
 import type { Connection } from '@planetscale/database';
 import { Client } from '@planetscale/database';
-import { entityKind } from '~/entity.ts';
 import type { Logger } from '~/logger.ts';
 import { DefaultLogger } from '~/logger.ts';
 import { MySqlDatabase } from '~/mysql-core/db.ts';
@@ -19,11 +18,9 @@ export interface PlanetscaleSDriverOptions {
 	logger?: Logger;
 }
 
-export class PlanetScaleDatabase<
+export type PlanetScaleDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends MySqlDatabase<PlanetscaleQueryResultHKT, PlanetScalePreparedQueryHKT, TSchema> {
-	static readonly [entityKind]: string = 'PlanetScaleDatabase';
-}
+> = MySqlDatabase<PlanetscaleQueryResultHKT, PlanetScalePreparedQueryHKT, TSchema>;
 
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: Client | Connection,
@@ -85,5 +82,5 @@ Starting from version 0.30.0, you will encounter an error if you attempt to use 
 	}
 
 	const session = new PlanetscaleSession(client, dialect, undefined, schema, { logger });
-	return new PlanetScaleDatabase(dialect, session, schema as any, 'planetscale') as PlanetScaleDatabase<TSchema>;
+	return new MySqlDatabase(dialect, session, schema, 'planetscale') as PlanetScaleDatabase<TSchema>;
 }

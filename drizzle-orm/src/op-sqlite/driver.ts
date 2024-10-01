@@ -1,5 +1,4 @@
 import type { OPSQLiteConnection, QueryResult } from '@op-engineering/op-sqlite';
-import { entityKind } from '~/entity.ts';
 import { DefaultLogger } from '~/logger.ts';
 import {
 	createTableRelationsHelpers,
@@ -12,11 +11,9 @@ import { SQLiteAsyncDialect } from '~/sqlite-core/dialect.ts';
 import type { DrizzleConfig } from '~/utils.ts';
 import { OPSQLiteSession } from './session.ts';
 
-export class OPSQLiteDatabase<
+export type OPSQLiteDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends BaseSQLiteDatabase<'async', QueryResult, TSchema> {
-	static readonly [entityKind]: string = 'OPSQLiteDatabase';
-}
+> = BaseSQLiteDatabase<'async', QueryResult, TSchema>;
 
 export function drizzle<TSchema extends Record<string, unknown> = Record<string, never>>(
 	client: OPSQLiteConnection,
@@ -44,5 +41,5 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 	}
 
 	const session = new OPSQLiteSession(client, dialect, schema, { logger });
-	return new OPSQLiteDatabase('async', dialect, session, schema) as OPSQLiteDatabase<TSchema>;
+	return new BaseSQLiteDatabase('async', dialect, session, schema) as OPSQLiteDatabase<TSchema>;
 }

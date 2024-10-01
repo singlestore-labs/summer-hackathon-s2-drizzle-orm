@@ -1,4 +1,3 @@
-import { entityKind } from '~/entity.ts';
 import { DefaultLogger } from '~/logger.ts';
 import { MySqlDatabase } from '~/mysql-core/db.ts';
 import { MySqlDialect } from '~/mysql-core/dialect.ts';
@@ -11,11 +10,9 @@ import {
 import type { DrizzleConfig } from '~/utils.ts';
 import { type MySqlRemotePreparedQueryHKT, type MySqlRemoteQueryResultHKT, MySqlRemoteSession } from './session.ts';
 
-export class MySqlRemoteDatabase<
+export type MySqlRemoteDatabase<
 	TSchema extends Record<string, unknown> = Record<string, never>,
-> extends MySqlDatabase<MySqlRemoteQueryResultHKT, MySqlRemotePreparedQueryHKT, TSchema> {
-	static readonly [entityKind]: string = 'MySqlRemoteDatabase';
-}
+> = MySqlDatabase<MySqlRemoteQueryResultHKT, MySqlRemotePreparedQueryHKT, TSchema>;
 
 export type RemoteCallback = (
 	sql: string,
@@ -49,5 +46,5 @@ export function drizzle<TSchema extends Record<string, unknown> = Record<string,
 	}
 
 	const session = new MySqlRemoteSession(callback, dialect, schema, { logger });
-	return new MySqlRemoteDatabase(dialect, session, schema as any, 'default') as MySqlRemoteDatabase<TSchema>;
+	return new MySqlDatabase(dialect, session, schema, 'default') as MySqlRemoteDatabase<TSchema>;
 }
