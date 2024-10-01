@@ -1,19 +1,13 @@
-import { boolean, command, number, string } from '@drizzle-team/brocli';
 import chalk from 'chalk';
-import 'dotenv/config';
-import { mkdirSync } from 'fs';
-import { renderWithTask } from 'hanji';
-import { dialects } from 'src/schemaValidator';
+import { checkHandler } from './commands/check';
+import { assertOrmCoreVersion, assertPackages, assertStudioNodeVersion, ormVersionGt } from './utils';
 import '../@types/utils';
 import { assertUnreachable } from '../global';
 import { type Setup } from '../serializer/studio';
 import { assertV1OutFolder } from '../utils';
-import { certs } from '../utils/certs';
-import { checkHandler } from './commands/check';
 import { dropMigration } from './commands/drop';
 import { upMysqlHandler } from './commands/mysqlUp';
 import { upPgHandler } from './commands/pgUp';
-import { upSinglestoreHandler } from './commands/singlestoreUp';
 import { upSqliteHandler } from './commands/sqliteUp';
 import {
 	prepareCheckParams,
@@ -24,9 +18,17 @@ import {
 	preparePushConfig,
 	prepareStudioConfig,
 } from './commands/utils';
-import { assertOrmCoreVersion, assertPackages, assertStudioNodeVersion, ormVersionGt } from './utils';
 import { assertCollisions, drivers, prefixes } from './validations/common';
 import { withStyle } from './validations/outputs';
+import 'dotenv/config';
+import { boolean, command, number, string } from '@drizzle-team/brocli';
+import { mkdirSync } from 'fs';
+import { renderWithTask } from 'hanji';
+import { dialects } from 'src/schemaValidator';
+import { assertUnreachable } from '../global';
+import { drizzleForSingleStore, prepareSingleStoreSchema, type Setup } from '../serializer/studio';
+import { certs } from '../utils/certs';
+import { upSinglestoreHandler } from './commands/singlestoreUp';
 import { grey, MigrateProgress } from './views';
 
 const optionDialect = string('dialect')
