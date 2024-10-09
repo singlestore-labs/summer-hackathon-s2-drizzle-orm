@@ -293,7 +293,6 @@ export function tests(driver?: string) {
 
 			testRunNumber += 1;
 			console.log(`Test number: ${testRunNumber}`);
-			
 		});
 
 		async function setupReturningFunctionsTest(db: SingleStoreDatabase<any, any>) {
@@ -2401,6 +2400,7 @@ export function tests(driver?: string) {
 			await db.execute(sql`drop table if exists \`datestable\``);
 		});
 
+		// TODO (https://memsql.atlassian.net/browse/MCDB-63261) allow chaining limit and orderby in subquery
 		test('set operations (union) from query builder with subquery', async (ctx) => {
 			const { db } = ctx.singlestore;
 
